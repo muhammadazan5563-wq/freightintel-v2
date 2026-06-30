@@ -7,6 +7,14 @@ export default defineConfig(() => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api/equipment': {
+            target: 'https://searchcarriers.com',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/equipment/, '/company'),
+            followRedirects: true,
+          },
+        },
       },
       plugins: [react()],
       resolve: {
