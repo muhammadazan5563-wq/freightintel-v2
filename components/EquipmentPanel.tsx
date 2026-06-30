@@ -309,7 +309,7 @@ export const EquipmentPanel: React.FC<EquipmentPanelProps> = ({ dotNumber }) => 
 
       do {
         const response = await fetch(
-          `https://searchcarriers.com/company/${dotNumber}/equipment?page=${page}&perPage=100`
+          `/api/equipment?dotNumber=${dotNumber}&page=${page}&perPage=100`
         );
         if (!response.ok) throw new Error('Failed to fetch equipment data');
         const data: EquipmentApiResponse = await response.json();
