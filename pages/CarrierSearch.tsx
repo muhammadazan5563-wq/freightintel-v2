@@ -6,6 +6,7 @@ import { fetchCarriersFromSupabase, getCarrierCountFromSupabase, CarrierFiltersS
 import { fetchSafetyByDot, fetchInspectionsByDot, fetchCrashesByDot } from '../services/backendApiService';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPermissions } from '../config/permissions';
+import { EquipmentPanel } from '../components/EquipmentPanel';
 interface CarrierSearchProps {
   user: User;
   onNavigateToInsurance: () => void;
@@ -1106,7 +1107,10 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
                 </div>
               </div>
 
-              {/* Row 3 - Insurance History */}
+              {/* Row 3 - Equipment */}
+              <EquipmentPanel dotNumber={selectedCarrier.dotNumber} />
+
+              {/* Row 4 - Insurance History */}
               <BlurGate blurred={perms.blurInsuranceHistory} className="mb-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
