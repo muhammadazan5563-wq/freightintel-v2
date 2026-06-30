@@ -1,5 +1,13 @@
 {
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/equipment.ts": {
+      "runtime": "@vercel/node@5"
+    }
+  },
   "rewrites": [
-    { "source": "/api/equipment", "destination": "/api/equipment" }
+    { "source": "/api/equipment", "destination": "/api/equipment" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
