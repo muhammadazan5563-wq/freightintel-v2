@@ -144,6 +144,7 @@ export interface CarrierFiltersSupabase {
   legalName?: string;
   officerName?: string;
   entityType?: string;
+  reactivation?: string;
   active?: string;           
   state?: string;
   hasEmail?: string;         
@@ -197,6 +198,7 @@ export const fetchCarriersFromSupabase = async (filters: CarrierFiltersSupabase 
       legalName: filters.legalName,
       officerName: filters.officerName,
       entityType: filters.entityType,
+      reactivation: filters.reactivation,
       active: filters.active,
       state: filters.state,
       hasEmail: filters.hasEmail,
