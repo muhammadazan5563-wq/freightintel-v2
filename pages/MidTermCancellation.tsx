@@ -239,6 +239,7 @@ export const MidTermCancellation: React.FC<MidTermCancellationProps> = ({ onNavi
   const DETAIL_PAGE_SIZE = 10;
   const [filters, setFilters] = useState({
     entityType: '',
+    reactivation: '',
     active: '',
     state: [] as string[],
     dot: '',
@@ -354,6 +355,7 @@ export const MidTermCancellation: React.FC<MidTermCancellationProps> = ({ onNavi
     if (nameSearchTerm.trim()) f.legalName = nameSearchTerm.trim();
     if (filters.dot.trim()) f.dotNumber = filters.dot.trim();
     if (filters.entityType) f.entityType = filters.entityType;
+    if (filters.reactivation) f.reactivation = filters.reactivation;
     if (filters.active) f.active = filters.active;
     if (filters.state.length > 0) f.state = filters.state.join('|'); 
     if (filters.hasEmail) f.hasEmail = filters.hasEmail;
@@ -404,7 +406,7 @@ export const MidTermCancellation: React.FC<MidTermCancellationProps> = ({ onNavi
     setMcSearchTerm('');
     setNameSearchTerm('');
     setFilters({
-      entityType: '', active: '', state: [], dot: '', yearsInBusinessMin: '', yearsInBusinessMax: '',
+      entityType: '', reactivation: '', active: '', state: [], dot: '', yearsInBusinessMin: '', yearsInBusinessMax: '',
       hasEmail: '', hasBoc3: '', hasCompanyRep: '',
       classification: [], carrierOperation: [], hazmat: '',
       powerUnitsMin: '', powerUnitsMax: '', driversMin: '', driversMax: '', cargo: [],
@@ -584,6 +586,15 @@ export const MidTermCancellation: React.FC<MidTermCancellationProps> = ({ onNavi
                   { value: 'CARRIER', label: 'Carrier' },
                   { value: 'BROKER', label: 'Broker' },
                 ]} />
+              </div>
+              <div>
+                <FilterLabel>Reactivation</FilterLabel>
+                <FilterSelect name="reactivation" value={filters.reactivation} onChange={handleFilterChange} options={[
+                  { value: '', label: 'Any' },
+                  { value: 'true', label: 'Yes' },
+                  { value: 'false', label: 'No' },
+                ]} />
+                <p className="text-[9px] text-slate-400 mt-1 ml-1">Has USDOT &amp; MC but not authorized</p>
               </div>
               <div>
                 <FilterLabel>Active</FilterLabel>
