@@ -217,6 +217,7 @@ export const RenewalPolicies: React.FC<RenewalPoliciesProps> = ({ onNavigateToIn
   const PAGE_SIZE_OPTIONS = [100, 200, 500, 1000];
   const [pageSize, setPageSize] = useState(500);
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageInput, setPageInput] = useState('');
   const [mcSearchTerm, setMcSearchTerm] = useState('');
   const [nameSearchTerm, setNameSearchTerm] = useState('');
   const [selectedDot, setSelectedDot] = useState<string | null>(null);
@@ -399,7 +400,21 @@ export const RenewalPolicies: React.FC<RenewalPoliciesProps> = ({ onNavigateToIn
     return f;
   }, [mcSearchTerm, nameSearchTerm, filters]);
   const applyFilters = () => loadCarriers(buildFilters(), 0);
+  const MAX_PAGE_LIMIT = 4000;
   const goToPage = (page: number) => loadCarriers(buildFilters(), page);
+  const isPageInputExceedsLimit = (() => {
+    const n = parseInt(pageInput, 10);
+    return Number.isFinite(n) && n > MAX_PAGE_LIMIT;
+  })();
+  const jumpToPage = () => {
+    const n = parseInt(pageInput, 10);
+    if (!Number.isFinite(n) || n < 1) return;
+    if (n > MAX_PAGE_LIMIT) return;
+    const maxPage = filteredCount > 0 ? Math.ceil(filteredCount / pageSize) : n;
+    const target = Math.max(1, Math.min(n, maxPage));
+    goToPage(target - 1);
+    setPageInput('');
+  };
   const resetAll = () => {
     setMcSearchTerm('');
     setNameSearchTerm('');
@@ -778,6 +793,28 @@ export const RenewalPolicies: React.FC<RenewalPoliciesProps> = ({ onNavigateToIn
             >
               Next
             </button>
+            <div className="flex items-center gap-1 ml-1">
+              <input
+                type="number"
+                min={1}
+                max={MAX_PAGE_LIMIT}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') jumpToPage(); }}
+                placeholder="Page"
+                className={`w-16 bg-white border rounded-xl px-2 py-1.5 text-xs text-slate-900 outline-none ${isPageInputExceedsLimit ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-[#7C5CFC]'}`}
+              />
+              <button
+                onClick={jumpToPage}
+                disabled={!pageInput.trim() || isPageInputExceedsLimit}
+                className="px-3 py-1.5 text-xs font-bold rounded-xl bg-[#7C5CFC] text-white hover:bg-[#6a4ce0] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                Go
+              </button>
+              {isPageInputExceedsLimit && (
+                <span className="text-[10px] text-red-500 font-semibold ml-1 whitespace-nowrap">Max page is {MAX_PAGE_LIMIT.toLocaleString()}</span>
+              )}
+            </div>
           </div>
         </div>
       )}
