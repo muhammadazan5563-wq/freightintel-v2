@@ -192,6 +192,7 @@ export const NewVenture: React.FC<NewVentureProps> = ({ user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const PAGE_SIZE = 200;
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageInput, setPageInput] = useState('');
   const [selectedVenture, setSelectedVenture] = useState<NewVentureData | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -271,7 +272,21 @@ export const NewVenture: React.FC<NewVentureProps> = ({ user }) => {
   }, [docketSearch, nameSearch, dateFrom, dateTo, filters]);
 
   const applyFilters = () => loadVentures(buildFilters(), 0);
+  const MAX_PAGE_LIMIT = 4000;
   const goToPage = (page: number) => loadVentures(buildFilters(), page);
+  const isPageInputExceedsLimit = (() => {
+    const n = parseInt(pageInput, 10);
+    return Number.isFinite(n) && n > MAX_PAGE_LIMIT;
+  })();
+  const jumpToPage = () => {
+    const n = parseInt(pageInput, 10);
+    if (!Number.isFinite(n) || n < 1) return;
+    if (n > MAX_PAGE_LIMIT) return;
+    const maxPage = filteredCount > 0 ? Math.ceil(filteredCount / PAGE_SIZE) : n;
+    const target = Math.max(1, Math.min(n, maxPage));
+    goToPage(target - 1);
+    setPageInput('');
+  };
 
   const resetAll = () => {
     setDocketSearch('');
@@ -982,6 +997,13 @@ export const NewVenture: React.FC<NewVentureProps> = ({ user }) => {
           </p>
           <div className="flex gap-2">
             <button
+              onClick={() => goToPage(0)}
+              disabled={currentPage === 0}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              First
+            </button>
+            <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 0}
               className="px-3 py-1.5 text-xs font-bold rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
@@ -995,6 +1017,28 @@ export const NewVenture: React.FC<NewVentureProps> = ({ user }) => {
             >
               Next
             </button>
+            <div className="flex items-center gap-1 ml-1">
+              <input
+                type="number"
+                min={1}
+                max={MAX_PAGE_LIMIT}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') jumpToPage(); }}
+                placeholder="Page"
+                className={`w-16 bg-white border rounded-xl px-2 py-1.5 text-xs text-slate-900 outline-none ${isPageInputExceedsLimit ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-[#7C5CFC]'}`}
+              />
+              <button
+                onClick={jumpToPage}
+                disabled={!pageInput.trim() || isPageInputExceedsLimit}
+                className="px-3 py-1.5 text-xs font-bold rounded-xl bg-[#7C5CFC] text-white hover:bg-[#6a4ce0] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                Go
+              </button>
+              {isPageInputExceedsLimit && (
+                <span className="text-[10px] text-red-500 font-semibold ml-1 whitespace-nowrap">Max page is {MAX_PAGE_LIMIT.toLocaleString()}</span>
+              )}
+            </div>
           </div>
         </div>
       )}
