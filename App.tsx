@@ -13,7 +13,8 @@ import { NewVenture } from './pages/NewVenture';
 import { InsuranceScraper } from './pages/InsuranceScraper';
 import { ViewState, User, CarrierData } from './types';
 import { Settings as SettingsIcon } from 'lucide-react';
-import { logoutUser, checkUserBanStatus, markUserOffline } from './services/backendApiService';
+import { updateUserInSupabase } from './services/userService';
+import { logoutUser, checkUserBanStatus } from './services/backendApiService';
 import { fetchCarriersFromSupabase, CarrierFiltersSupabase } from './services/supabaseClient';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { canAccessPage } from './config/permissions';
@@ -109,28 +110,14 @@ const App: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [user]);
 
-  // Mark user offline when browser tab closes or navigates away
-  useEffect(() => {
-    if (!user) return;
-
-    const handleBeforeUnload = () => {
-      markUserOffline();
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [user]);
-
   const handleLogin = (userData: User) => {
     setUser(userData);
     setCurrentView(userData.role === 'admin' ? 'admin' : 'dashboard');
   };
   const handleLogout = () => {
     if (user) {
-      markUserOffline();
+      updateUserInSupabase({ ...user, isOnline: false, lastActive: new Date().toISOString() })
+        .catch(err => console.error('Failed to sync logout status:', err));
     }
     logoutUser();
     setUser(null);
