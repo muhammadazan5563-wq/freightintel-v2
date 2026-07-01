@@ -237,6 +237,7 @@ export interface CarrierFilters {
   legalName?: string;
   officerName?: string;
   entityType?: string;
+  reactivation?: string;
   active?: string;
   state?: string;
   hasEmail?: string;
@@ -292,6 +293,7 @@ export const fetchCarriersFromBackend = async (filters: CarrierFilters = {}): Pr
     if (filters.legalName) params.append('legal_name', filters.legalName);
     if (filters.officerName) params.append('officer_name', filters.officerName);
     if (filters.entityType) params.append('entity_type', filters.entityType);
+    if (filters.reactivation) params.append('reactivation', filters.reactivation);
     if (filters.active) params.append('active', filters.active);
     if (filters.state) params.append('state', filters.state);
     if (filters.hasEmail) params.append('has_email', filters.hasEmail);
