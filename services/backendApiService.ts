@@ -22,6 +22,35 @@ function authHeadersGet(): Record<string, string> {
   return {};
 }
 
+export const markUserOffline = async (): Promise<void> => {
+  try {
+    const token = getToken();
+    if (!token) return;
+
+    // Use sendBeacon for reliability during page unload, fallback to fetch
+    const url = `${BACKEND_URL}/api/auth/offline`;
+    if (navigator.sendBeacon) {
+      const blob = new Blob([], { type: 'application/json' });
+      // sendBeacon doesn't support custom headers, so use fetch with keepalive as primary
+      fetch(url, {
+        method: 'POST',
+        headers: authHeadersGet(),
+        body: JSON.stringify({}),
+        keepalive: true,
+      }).catch(() => {});
+    } else {
+      fetch(url, {
+        method: 'POST',
+        headers: authHeadersGet(),
+        body: JSON.stringify({}),
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch {
+    // Silently fail - this is best-effort
+  }
+};
+
 export const checkUserBanStatus = async (): Promise<{ allowed: boolean; blocked: boolean; reason: string } | null> => {
   try {
     const token = getToken();
