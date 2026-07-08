@@ -193,58 +193,23 @@ const MultiSelect: React.FC<{
     </div>
   );
 };
-const MAX_OPEN_FILTER_GROUPS = 4;
-
-const FilterGroupContext = React.createContext<{
-  openGroups: Set<string>;
-  toggleGroup: (id: string) => void;
-  isAtLimit: boolean;
-}>({ openGroups: new Set(), toggleGroup: () => {}, isAtLimit: false });
-
-const useFilterGroupManager = () => {
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
-  const toggleGroup = useCallback((id: string) => {
-    setOpenGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else if (next.size < MAX_OPEN_FILTER_GROUPS) {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-  const resetGroups = useCallback(() => setOpenGroups(new Set()), []);
-  return { openGroups, toggleGroup, isAtLimit: openGroups.size >= MAX_OPEN_FILTER_GROUPS, resetGroups };
-};
-
-const FilterGroup: React.FC<{ id: string; title: string; icon: React.ReactNode; children: React.ReactNode; locked?: boolean }> = ({ id, title, icon, children, locked = false }) => {
-  const { openGroups, toggleGroup, isAtLimit } = React.useContext(FilterGroupContext);
-  const isOpen = locked ? false : openGroups.has(id);
-  const isLimitLocked = !isOpen && isAtLimit && !locked;
+const FilterGroup: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; locked?: boolean }> = ({ title, icon, children, locked = false }) => {
+  const [open, setOpen] = useState(!locked);
+  const isOpen = locked ? false : open;
   return (
-    <div className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${locked ? 'opacity-70 border-slate-200' : isLimitLocked ? 'border-slate-200 opacity-50 grayscale' : 'border-slate-200'}`}>
+    <div className={`bg-white border border-slate-200 rounded-2xl overflow-hidden ${locked ? 'opacity-70' : ''}`}>
       <button
         type="button"
-        onClick={() => { if (!locked && !isLimitLocked) toggleGroup(id); else if (isOpen) toggleGroup(id); }}
-        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all duration-200 ${locked ? 'cursor-not-allowed' : isLimitLocked ? 'cursor-not-allowed' : ''}`}
-        title={locked ? 'Upgrade your plan to unlock these filters' : isLimitLocked ? 'Maximum 4 filter groups can be open at a time. Close one to open another.' : undefined}
+        onClick={() => { if (!locked) setOpen(o => !o); }}
+        className={`w-full flex items-center justify-between px-4 py-3 text-left ${locked ? 'cursor-not-allowed' : ''}`}
+        title={locked ? 'Upgrade your plan to unlock these filters' : undefined}
       >
         <span className="flex items-center gap-2 text-xs font-black text-[#7C5CFC] uppercase tracking-widest">
           {icon} {title}
         </span>
-        <div className="flex items-center gap-2">
-          {isLimitLocked && (
-            <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full animate-pulse">
-              LIMIT REACHED
-            </span>
-          )}
-          {locked ? <Lock size={13} className="text-slate-400" /> : (isOpen ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />)}
-        </div>
+        {locked ? <Lock size={13} className="text-slate-400" /> : (isOpen ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />)}
       </button>
-      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="px-4 pb-4 space-y-3">{children}</div>
-      </div>
+      {isOpen && <div className="px-4 pb-4 space-y-3">{children}</div>}
     </div>
   );
 };
@@ -270,7 +235,6 @@ const MinMaxInputs: React.FC<{
 );
 export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateToInsurance }) => {
   const perms = getPermissions(user);
-  const filterGroupManager = useFilterGroupManager();
   const [carriers, setCarriers] = useState<CarrierData[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
@@ -587,17 +551,9 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
 
       {/* Filter Panel */}
       {showFilters && (
-        <FilterGroupContext.Provider value={filterGroupManager}>
         <div className="mb-4 p-4 bg-white border border-slate-200 rounded-3xl overflow-y-auto max-h-[55vh] custom-scrollbar shadow-sm">
-          {filterGroupManager.isAtLimit && (
-            <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
-              <Lock size={12} className="text-amber-600" />
-              <span className="text-xs font-bold text-amber-700">Maximum 4 filter groups open. Close one to open another.</span>
-              <span className="text-xs text-amber-500 ml-auto">{filterGroupManager.openGroups.size}/{MAX_OPEN_FILTER_GROUPS}</span>
-            </div>
-          )}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <FilterGroup id="motor-carrier" title="Motor Carrier" icon={<Truck size={12} />}>
+            <FilterGroup title="Motor Carrier" icon={<Truck size={12} />}>
               <div>
                 <FilterLabel>Entity Type</FilterLabel>
                 <FilterSelect name="entityType" value={filters.entityType} onChange={handleFilterChange} options={[
@@ -643,7 +599,7 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
               </div>
             </FilterGroup>
-            <FilterGroup id="carrier-operation" title="Carrier Operation" icon={<Activity size={12} />}>
+            <FilterGroup title="Carrier Operation" icon={<Activity size={12} />}>
               <div>
                 <FilterLabel>Classification</FilterLabel>
                 <MultiSelect options={OPERATION_CLASSIFICATIONS} selected={filters.classification} onChange={v => setFilters(p => ({ ...p, classification: v }))} placeholder="All" />
@@ -671,7 +627,7 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
                 <MultiSelect options={CARGO_TYPES} selected={filters.cargo} onChange={v => setFilters(p => ({ ...p, cargo: v }))} placeholder="All" />
               </div>
             </FilterGroup>
-            <FilterGroup id="insurance-policy" title="Insurance Policy" icon={<Shield size={12} />} locked={perms.lockedFilterGroups.includes('Insurance Policy')}>
+            <FilterGroup title="Insurance Policy" icon={<Shield size={12} />} locked={perms.lockedFilterGroups.includes('Insurance Policy')}>
               <div>
                 <FilterLabel>Required</FilterLabel>
                 <MultiSelect options={INSURANCE_REQUIRED_TYPES} selected={filters.insuranceRequired} onChange={v => setFilters(p => ({ ...p, insuranceRequired: v }))} placeholder="All" />
@@ -733,7 +689,7 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
                 <FilterSelect name="trustFundOnFile" value={filters.trustFundOnFile} onChange={handleFilterChange} options={yesNoNumOptions} />
               </div>
             </FilterGroup>
-            <FilterGroup id="safety" title="Safety" icon={<ShieldCheck size={12} />} locked={perms.lockedFilterGroups.includes('Safety')}>
+            <FilterGroup title="Safety" icon={<ShieldCheck size={12} />} locked={perms.lockedFilterGroups.includes('Safety')}>
               <div>
                 <FilterLabel>OOS Violations</FilterLabel>
                 <MinMaxInputs nameMin="oosMin" nameMax="oosMax" valueMin={filters.oosMin} valueMax={filters.oosMax} onChange={handleFilterChange} />
@@ -761,7 +717,7 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
             </FilterGroup>
           </div>
           <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-200">
-            <button onClick={() => { resetAll(); filterGroupManager.resetGroups(); }} className="px-6 py-2.5 bg-white hover:bg-slate-50 text-slate-600 rounded-xl text-sm font-bold transition-all border border-slate-200">
+            <button onClick={resetAll} className="px-6 py-2.5 bg-white hover:bg-slate-50 text-slate-600 rounded-xl text-sm font-bold transition-all border border-slate-200">
               Reset All
             </button>
             <button onClick={applyFilters} disabled={isLoading}
@@ -770,7 +726,6 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
             </button>
           </div>
         </div>
-        </FilterGroupContext.Provider>
       )}
 
       {/* Table */}
