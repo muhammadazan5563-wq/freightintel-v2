@@ -233,6 +233,47 @@ const MinMaxInputs: React.FC<{
       className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
   </div>
 );
+// Maximum number of individual filters that can be active at once
+const MAX_ACTIVE_FILTERS = 4;
+
+// Helper to count how many individual filters are actively set
+const countActiveFilters = (filters: Record<string, any>, officerSearchTerm: string): string[] => {
+  const active: string[] = [];
+  if (filters.entityType) active.push('entityType');
+  if (filters.active) active.push('active');
+  if (filters.state.length > 0) active.push('state');
+  if (filters.dot) active.push('dot');
+  if (filters.yearsInBusinessMin || filters.yearsInBusinessMax) active.push('yearsInBusiness');
+  if (filters.hasEmail) active.push('hasEmail');
+  if (filters.hasBoc3) active.push('hasBoc3');
+  if (filters.hasCompanyRep) active.push('hasCompanyRep');
+  if (officerSearchTerm.trim()) active.push('officerName');
+  if (filters.classification.length > 0) active.push('classification');
+  if (filters.carrierOperation.length > 0) active.push('carrierOperation');
+  if (filters.hazmat) active.push('hazmat');
+  if (filters.powerUnitsMin || filters.powerUnitsMax) active.push('powerUnits');
+  if (filters.driversMin || filters.driversMax) active.push('drivers');
+  if (filters.cargo.length > 0) active.push('cargo');
+  if (filters.insuranceRequired.length > 0) active.push('insuranceRequired');
+  if (filters.insuranceCompany.length > 0) active.push('insuranceCompany');
+  if (filters.renewalPolicyMonths) active.push('renewalPolicyMonths');
+  if (filters.renewalDateFrom || filters.renewalDateTo) active.push('renewalDate');
+  if (filters.insEffectiveDateFrom || filters.insEffectiveDateTo) active.push('insEffectiveDate');
+  if (filters.insCancellationDateFrom || filters.insCancellationDateTo) active.push('insCancellationDate');
+  if (filters.bipdMin || filters.bipdMax) active.push('bipd');
+  if (filters.bipdOnFile) active.push('bipdOnFile');
+  if (filters.cargoOnFile) active.push('cargoOnFile');
+  if (filters.bondOnFile) active.push('bondOnFile');
+  if (filters.trustFundOnFile) active.push('trustFundOnFile');
+  if (filters.oosMin || filters.oosMax) active.push('oos');
+  if (filters.crashesMin || filters.crashesMax) active.push('crashes');
+  if (filters.injuriesMin || filters.injuriesMax) active.push('injuries');
+  if (filters.fatalitiesMin || filters.fatalitiesMax) active.push('fatalities');
+  if (filters.towawayMin || filters.towawayMax) active.push('towaway');
+  if (filters.inspectionsMin || filters.inspectionsMax) active.push('inspections');
+  return active;
+};
+
 export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateToInsurance }) => {
   const perms = getPermissions(user);
   const [carriers, setCarriers] = useState<CarrierData[]>([]);
@@ -310,6 +351,17 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
   };
+
+  // --- Filter Limit Logic (max 4 filters at a time) ---
+  const activeFilterKeys = countActiveFilters(filters, officerSearchTerm);
+  const filterLimitReached = activeFilterKeys.length >= MAX_ACTIVE_FILTERS;
+
+  // Check if a specific filter is locked (not currently active AND limit reached)
+  const isFilterLocked = (filterKey: string): boolean => {
+    if (activeFilterKeys.includes(filterKey)) return false; // already active, allow editing
+    return filterLimitReached;
+  };
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -552,165 +604,223 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
       {/* Filter Panel */}
       {showFilters && (
         <div className="mb-4 p-4 bg-white border border-slate-200 rounded-3xl overflow-y-auto max-h-[55vh] custom-scrollbar shadow-sm">
+          {/* Filter Limit Indicator */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Filters:</span>
+              <div className="flex items-center gap-1">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                      i < activeFilterKeys.length
+                        ? 'bg-[#7C5CFC] scale-110'
+                        : 'bg-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className={`text-xs font-bold ${filterLimitReached ? 'text-amber-600' : 'text-slate-500'}`}>
+                {activeFilterKeys.length}/{MAX_ACTIVE_FILTERS}
+              </span>
+              {filterLimitReached && (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full animate-pulse">
+                  Max filters reached — deselect one to unlock others
+                </span>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <FilterGroup title="Motor Carrier" icon={<Truck size={12} />}>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('entityType') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('entityType') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Entity Type</FilterLabel>
-                <FilterSelect name="entityType" value={filters.entityType} onChange={handleFilterChange} options={[
+                <FilterSelect name="entityType" value={filters.entityType} onChange={handleFilterChange} disabled={isFilterLocked('entityType')} options={[
                   { value: '', label: 'All' },
                   { value: 'CARRIER', label: 'Carrier' },
                   { value: 'BROKER', label: 'Broker' },
                 ]} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('active') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('active') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Active</FilterLabel>
-                <FilterSelect name="active" value={filters.active} onChange={handleFilterChange} options={yesNoOptions} />
+                <FilterSelect name="active" value={filters.active} onChange={handleFilterChange} disabled={isFilterLocked('active')} options={yesNoOptions} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('state') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('state') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>State</FilterLabel>
-                <MultiSelect options={US_STATES} selected={filters.state} onChange={v => setFilters(p => ({ ...p, state: v }))} placeholder="All" disabled={perms.disabledFilters.includes('state')} />
+                <MultiSelect options={US_STATES} selected={filters.state} onChange={v => setFilters(p => ({ ...p, state: v }))} placeholder="All" disabled={perms.disabledFilters.includes('state') || isFilterLocked('state')} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('dot') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('dot') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>DOT Number</FilterLabel>
-                <input type="number" name="dot" value={filters.dot} onChange={handleFilterChange} placeholder="" min={0}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
+                <input type="number" name="dot" value={filters.dot} onChange={handleFilterChange} placeholder="" min={0} disabled={isFilterLocked('dot')}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('yearsInBusiness') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('yearsInBusiness') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Years in Business</FilterLabel>
                 <MinMaxInputs nameMin="yearsInBusinessMin" nameMax="yearsInBusinessMax"
                   valueMin={filters.yearsInBusinessMin} valueMax={filters.yearsInBusinessMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('hasEmail') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('hasEmail') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Has Email</FilterLabel>
-                <FilterSelect name="hasEmail" value={filters.hasEmail} onChange={handleFilterChange} options={yesNoOptions} disabled={perms.disabledFilters.includes('hasEmail')} />
+                <FilterSelect name="hasEmail" value={filters.hasEmail} onChange={handleFilterChange} options={yesNoOptions} disabled={perms.disabledFilters.includes('hasEmail') || isFilterLocked('hasEmail')} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('hasBoc3') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('hasBoc3') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Has BOC-3</FilterLabel>
-                <FilterSelect name="hasBoc3" value={filters.hasBoc3} onChange={handleFilterChange} options={yesNoOptions} />
+                <FilterSelect name="hasBoc3" value={filters.hasBoc3} onChange={handleFilterChange} disabled={isFilterLocked('hasBoc3')} options={yesNoOptions} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('hasCompanyRep') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('hasCompanyRep') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Company Rep. Available</FilterLabel>
-                <FilterSelect name="hasCompanyRep" value={filters.hasCompanyRep} onChange={handleFilterChange} options={yesNoOptions} />
+                <FilterSelect name="hasCompanyRep" value={filters.hasCompanyRep} onChange={handleFilterChange} disabled={isFilterLocked('hasCompanyRep')} options={yesNoOptions} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('officerName') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('officerName') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Officer Name</FilterLabel>
                 <input type="text" value={officerSearchTerm} onChange={(e) => setOfficerSearchTerm(e.target.value)} placeholder="Search by officer name..." onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-                  disabled={perms.disabledFilters.includes('officerName')}
+                  disabled={perms.disabledFilters.includes('officerName') || isFilterLocked('officerName')}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
               </div>
             </FilterGroup>
             <FilterGroup title="Carrier Operation" icon={<Activity size={12} />}>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('classification') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('classification') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Classification</FilterLabel>
-                <MultiSelect options={OPERATION_CLASSIFICATIONS} selected={filters.classification} onChange={v => setFilters(p => ({ ...p, classification: v }))} placeholder="All" />
+                <MultiSelect options={OPERATION_CLASSIFICATIONS} selected={filters.classification} onChange={v => setFilters(p => ({ ...p, classification: v }))} placeholder="All" disabled={isFilterLocked('classification')} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('carrierOperation') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('carrierOperation') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Carrier Operation</FilterLabel>
-                <MultiSelect options={CARRIER_OPERATIONS} selected={filters.carrierOperation} onChange={v => setFilters(p => ({ ...p, carrierOperation: v }))} placeholder="All" />
+                <MultiSelect options={CARRIER_OPERATIONS} selected={filters.carrierOperation} onChange={v => setFilters(p => ({ ...p, carrierOperation: v }))} placeholder="All" disabled={isFilterLocked('carrierOperation')} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('hazmat') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('hazmat') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Hazmat</FilterLabel>
-                <FilterSelect name="hazmat" value={filters.hazmat} onChange={handleFilterChange} options={yesNoOptions} />
+                <FilterSelect name="hazmat" value={filters.hazmat} onChange={handleFilterChange} disabled={isFilterLocked('hazmat')} options={yesNoOptions} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('powerUnits') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('powerUnits') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Power Units</FilterLabel>
                 <MinMaxInputs nameMin="powerUnitsMin" nameMax="powerUnitsMax"
                   valueMin={filters.powerUnitsMin} valueMax={filters.powerUnitsMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('drivers') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('drivers') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Drivers</FilterLabel>
                 <MinMaxInputs nameMin="driversMin" nameMax="driversMax"
                   valueMin={filters.driversMin} valueMax={filters.driversMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('cargo') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('cargo') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Cargo</FilterLabel>
-                <MultiSelect options={CARGO_TYPES} selected={filters.cargo} onChange={v => setFilters(p => ({ ...p, cargo: v }))} placeholder="All" />
+                <MultiSelect options={CARGO_TYPES} selected={filters.cargo} onChange={v => setFilters(p => ({ ...p, cargo: v }))} placeholder="All" disabled={isFilterLocked('cargo')} />
               </div>
             </FilterGroup>
             <FilterGroup title="Insurance Policy" icon={<Shield size={12} />} locked={perms.lockedFilterGroups.includes('Insurance Policy')}>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('insuranceRequired') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('insuranceRequired') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Required</FilterLabel>
-                <MultiSelect options={INSURANCE_REQUIRED_TYPES} selected={filters.insuranceRequired} onChange={v => setFilters(p => ({ ...p, insuranceRequired: v }))} placeholder="All" />
+                <MultiSelect options={INSURANCE_REQUIRED_TYPES} selected={filters.insuranceRequired} onChange={v => setFilters(p => ({ ...p, insuranceRequired: v }))} placeholder="All" disabled={isFilterLocked('insuranceRequired')} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('insuranceCompany') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('insuranceCompany') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Insurance Company</FilterLabel>
-                <MultiSelect options={INSURANCE_COMPANIES} selected={filters.insuranceCompany} onChange={v => setFilters(p => ({ ...p, insuranceCompany: v }))} placeholder="All" />
+                <MultiSelect options={INSURANCE_COMPANIES} selected={filters.insuranceCompany} onChange={v => setFilters(p => ({ ...p, insuranceCompany: v }))} placeholder="All" disabled={isFilterLocked('insuranceCompany')} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('renewalPolicyMonths') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('renewalPolicyMonths') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Renewal Policy Monthly</FilterLabel>
-                <FilterSelect name="renewalPolicyMonths" value={filters.renewalPolicyMonths} onChange={handleFilterChange} options={RENEWAL_MONTH_OPTIONS} />
+                <FilterSelect name="renewalPolicyMonths" value={filters.renewalPolicyMonths} onChange={handleFilterChange} disabled={isFilterLocked('renewalPolicyMonths')} options={RENEWAL_MONTH_OPTIONS} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('renewalDate') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('renewalDate') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Renewal Policy Date</FilterLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  <input type="date" name="renewalDateFrom" value={filters.renewalDateFrom} onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
-                  <input type="date" name="renewalDateTo" value={filters.renewalDateTo} onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
+                  <input type="date" name="renewalDateFrom" value={filters.renewalDateFrom} onChange={handleFilterChange} disabled={isFilterLocked('renewalDate')}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                  <input type="date" name="renewalDateTo" value={filters.renewalDateTo} onChange={handleFilterChange} disabled={isFilterLocked('renewalDate')}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
                 </div>
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('insEffectiveDate') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('insEffectiveDate') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Insurance Effective Date</FilterLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  <input type="date" name="insEffectiveDateFrom" value={filters.insEffectiveDateFrom} onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
-                  <input type="date" name="insEffectiveDateTo" value={filters.insEffectiveDateTo} onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
+                  <input type="date" name="insEffectiveDateFrom" value={filters.insEffectiveDateFrom} onChange={handleFilterChange} disabled={isFilterLocked('insEffectiveDate')}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                  <input type="date" name="insEffectiveDateTo" value={filters.insEffectiveDateTo} onChange={handleFilterChange} disabled={isFilterLocked('insEffectiveDate')}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
                 </div>
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('insCancellationDate') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('insCancellationDate') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Insurance Cancellation Date</FilterLabel>
                 <div className="grid grid-cols-2 gap-2">
-                  <input type="date" name="insCancellationDateFrom" value={filters.insCancellationDateFrom} onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
-                  <input type="date" name="insCancellationDateTo" value={filters.insCancellationDateTo} onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC]" />
+                  <input type="date" name="insCancellationDateFrom" value={filters.insCancellationDateFrom} onChange={handleFilterChange} disabled={isFilterLocked('insCancellationDate')}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                  <input type="date" name="insCancellationDateTo" value={filters.insCancellationDateTo} onChange={handleFilterChange} disabled={isFilterLocked('insCancellationDate')}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#7C5CFC] disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
                 </div>
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('bipd') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('bipd') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Required Amount</FilterLabel>
                 <MinMaxInputs nameMin="bipdMin" nameMax="bipdMax"
                   valueMin={filters.bipdMin} valueMax={filters.bipdMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('bipdOnFile') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('bipdOnFile') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Has BIPD Insurance</FilterLabel>
-                <FilterSelect name="bipdOnFile" value={filters.bipdOnFile} onChange={handleFilterChange} options={yesNoNumOptions} />
+                <FilterSelect name="bipdOnFile" value={filters.bipdOnFile} onChange={handleFilterChange} disabled={isFilterLocked('bipdOnFile')} options={yesNoNumOptions} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('cargoOnFile') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('cargoOnFile') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Has Cargo Insurance</FilterLabel>
-                <FilterSelect name="cargoOnFile" value={filters.cargoOnFile} onChange={handleFilterChange} options={yesNoNumOptions} />
+                <FilterSelect name="cargoOnFile" value={filters.cargoOnFile} onChange={handleFilterChange} disabled={isFilterLocked('cargoOnFile')} options={yesNoNumOptions} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('bondOnFile') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('bondOnFile') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Has Bond Insurance</FilterLabel>
-                <FilterSelect name="bondOnFile" value={filters.bondOnFile} onChange={handleFilterChange} options={yesNoNumOptions} />
+                <FilterSelect name="bondOnFile" value={filters.bondOnFile} onChange={handleFilterChange} disabled={isFilterLocked('bondOnFile')} options={yesNoNumOptions} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('trustFundOnFile') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('trustFundOnFile') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Has Trust Fund Insurance</FilterLabel>
-                <FilterSelect name="trustFundOnFile" value={filters.trustFundOnFile} onChange={handleFilterChange} options={yesNoNumOptions} />
+                <FilterSelect name="trustFundOnFile" value={filters.trustFundOnFile} onChange={handleFilterChange} disabled={isFilterLocked('trustFundOnFile')} options={yesNoNumOptions} />
               </div>
             </FilterGroup>
             <FilterGroup title="Safety" icon={<ShieldCheck size={12} />} locked={perms.lockedFilterGroups.includes('Safety')}>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('oos') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('oos') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>OOS Violations</FilterLabel>
                 <MinMaxInputs nameMin="oosMin" nameMax="oosMax" valueMin={filters.oosMin} valueMax={filters.oosMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('crashes') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('crashes') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Crashes</FilterLabel>
                 <MinMaxInputs nameMin="crashesMin" nameMax="crashesMax" valueMin={filters.crashesMin} valueMax={filters.crashesMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('injuries') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('injuries') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Injuries</FilterLabel>
                 <MinMaxInputs nameMin="injuriesMin" nameMax="injuriesMax" valueMin={filters.injuriesMin} valueMax={filters.injuriesMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('fatalities') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('fatalities') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Fatalities</FilterLabel>
                 <MinMaxInputs nameMin="fatalitiesMin" nameMax="fatalitiesMax" valueMin={filters.fatalitiesMin} valueMax={filters.fatalitiesMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('towaway') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('towaway') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Towaway</FilterLabel>
                 <MinMaxInputs nameMin="towawayMin" nameMax="towawayMax" valueMin={filters.towawayMin} valueMax={filters.towawayMax} onChange={handleFilterChange} />
               </div>
-              <div>
+              <div className={`relative transition-all duration-300 ${isFilterLocked('inspections') ? 'opacity-40 pointer-events-none' : ''}`}>
+                {isFilterLocked('inspections') && <div className="absolute inset-0 z-10 flex items-center justify-center"><Lock size={12} className="text-slate-400" /></div>}
                 <FilterLabel>Inspections</FilterLabel>
                 <MinMaxInputs nameMin="inspectionsMin" nameMax="inspectionsMax" valueMin={filters.inspectionsMin} valueMax={filters.inspectionsMax} onChange={handleFilterChange} />
               </div>
