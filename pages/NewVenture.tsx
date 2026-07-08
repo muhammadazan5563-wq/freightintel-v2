@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Eye, X, MapPin, Phone, Mail, Hash, Truck, Calendar,
   Download, Activity, Loader2, ChevronDown, ChevronUp, Copy, Check,
-  Zap, Shield, Globe, Filter, RefreshCw, Database, AlertTriangle
+  Zap, Shield, Globe, Filter, RefreshCw, Database, AlertTriangle, Lock
 } from 'lucide-react';
 import { NewVentureData, User } from '../types';
 import {
@@ -183,6 +183,28 @@ function downloadNewVentureCSV(data: NewVentureData[]) {
   URL.revokeObjectURL(url);
 }
 
+// Maximum number of individual filters that can be active at once
+const MAX_ACTIVE_FILTERS = 4;
+
+// Helper to count how many individual filters are actively set
+const countActiveFiltersNewVenture = (filters: Record<string, any>, dateFrom: string, dateTo: string): string[] => {
+  const active: string[] = [];
+  if (filters.active) active.push('active');
+  if (filters.entityType) active.push('entityType');
+  if (filters.states.length > 0) active.push('states');
+  if (filters.dotNumber) active.push('dotNumber');
+  if (filters.hasEmail) active.push('hasEmail');
+  if (filters.carrierOperation.length > 0) active.push('carrierOperation');
+  if (filters.hazmat) active.push('hazmat');
+  if (filters.powerUnitsMin || filters.powerUnitsMax) active.push('powerUnits');
+  if (filters.driversMin || filters.driversMax) active.push('drivers');
+  if (filters.bipdOnFile) active.push('bipdOnFile');
+  if (filters.cargoOnFile) active.push('cargoOnFile');
+  if (filters.bondOnFile) active.push('bondOnFile');
+  if (dateFrom || dateTo) active.push('dateRange');
+  return active;
+};
+
 export const NewVenture: React.FC<NewVentureProps> = ({ user }) => {
   const isAdmin = user.role === 'admin';
   const [ventures, setVentures] = useState<NewVentureData[]>([]);
@@ -246,6 +268,15 @@ export const NewVenture: React.FC<NewVentureProps> = ({ user }) => {
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  // --- Filter Limit Logic (max 4 filters at a time) ---
+  const activeFilterKeys = countActiveFiltersNewVenture(filters, dateFrom, dateTo);
+  const filterLimitReached = activeFilterKeys.length >= MAX_ACTIVE_FILTERS;
+
+  const isFilterLocked = (filterKey: string): boolean => {
+    if (activeFilterKeys.includes(filterKey)) return false;
+    return filterLimitReached;
   };
 
   const buildFilters = useCallback((): NewVentureFilters => {
@@ -809,70 +840,84 @@ export const NewVenture: React.FC<NewVentureProps> = ({ user }) => {
       {/* Filter Panel */}
       {showFilters && (
         <div className="mb-4 p-4 bg-white border border-slate-200 rounded-3xl overflow-y-auto max-h-[55vh] custom-scrollbar shadow-sm">
+          {/* Filter limit indicator */}
+          <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Active Filters:</span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${filterLimitReached ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700'}`}>
+                {activeFilterKeys.length} / {MAX_ACTIVE_FILTERS}
+              </span>
+              {filterLimitReached && (
+                <span className="text-xs text-amber-600 flex items-center gap-1">
+                  <Lock size={10} /> Max reached — clear a filter to add another
+                </span>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <FilterGroup title="Motor Carrier" icon={<Truck size={12} />}>
-              <div>
-                <FilterLabel>Active</FilterLabel>
+              <div className={`relative ${isFilterLocked('active') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Active{isFilterLocked('active') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <FilterSelect name="active" value={filters.active} onChange={handleFilterChange} options={activeStatusOptions} />
               </div>
-              <div>
-                <FilterLabel>Entity Type</FilterLabel>
+              <div className={`relative ${isFilterLocked('entityType') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Entity Type{isFilterLocked('entityType') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <FilterSelect name="entityType" value={filters.entityType} onChange={handleFilterChange} options={entityTypeOptions} />
               </div>
-              <div>
-                <FilterLabel>State</FilterLabel>
+              <div className={`relative ${isFilterLocked('states') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>State{isFilterLocked('states') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <MultiSelect options={US_STATES} selected={filters.states} onChange={vals => setFilters(f => ({ ...f, states: vals }))} placeholder="All" />
               </div>
-              <div>
-                <FilterLabel>DOT Number</FilterLabel>
+              <div className={`relative ${isFilterLocked('dotNumber') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>DOT Number{isFilterLocked('dotNumber') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <input type="number" name="dotNumber" value={filters.dotNumber} onChange={handleFilterChange} placeholder="" min={0}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-violet-500" />
               </div>
-              <div>
-                <FilterLabel>Has Email</FilterLabel>
+              <div className={`relative ${isFilterLocked('hasEmail') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Has Email{isFilterLocked('hasEmail') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <FilterSelect name="hasEmail" value={filters.hasEmail} onChange={handleFilterChange} options={yesNoOptions} />
               </div>
             </FilterGroup>
             <FilterGroup title="Carrier Operation" icon={<Activity size={12} />}>
-              <div>
-                <FilterLabel>Carrier Operation</FilterLabel>
+              <div className={`relative ${isFilterLocked('carrierOperation') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Carrier Operation{isFilterLocked('carrierOperation') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <MultiSelect options={CARRIER_OPERATIONS} selected={filters.carrierOperation} onChange={vals => setFilters(f => ({ ...f, carrierOperation: vals }))} placeholder="All" />
               </div>
-              <div>
-                <FilterLabel>Hazmat</FilterLabel>
+              <div className={`relative ${isFilterLocked('hazmat') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Hazmat{isFilterLocked('hazmat') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <FilterSelect name="hazmat" value={filters.hazmat} onChange={handleFilterChange} options={yesNoOptions} />
               </div>
-              <div>
-                <FilterLabel>Power Units</FilterLabel>
+              <div className={`relative ${isFilterLocked('powerUnits') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Power Units{isFilterLocked('powerUnits') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <MinMaxInputs nameMin="powerUnitsMin" nameMax="powerUnitsMax" valueMin={filters.powerUnitsMin} valueMax={filters.powerUnitsMax} onChange={handleFilterChange} />
               </div>
-              <div>
-                <FilterLabel>Drivers</FilterLabel>
+              <div className={`relative ${isFilterLocked('drivers') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Drivers{isFilterLocked('drivers') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <MinMaxInputs nameMin="driversMin" nameMax="driversMax" valueMin={filters.driversMin} valueMax={filters.driversMax} onChange={handleFilterChange} />
               </div>
             </FilterGroup>
             <FilterGroup title="Insurance Policy" icon={<Shield size={12} />}>
-              <div>
-                <FilterLabel>Has BIPD Insurance</FilterLabel>
+              <div className={`relative ${isFilterLocked('bipdOnFile') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Has BIPD Insurance{isFilterLocked('bipdOnFile') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <FilterSelect name="bipdOnFile" value={filters.bipdOnFile} onChange={handleFilterChange} options={yesNoOptions} />
               </div>
-              <div>
-                <FilterLabel>Has Cargo Insurance</FilterLabel>
+              <div className={`relative ${isFilterLocked('cargoOnFile') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Has Cargo Insurance{isFilterLocked('cargoOnFile') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <FilterSelect name="cargoOnFile" value={filters.cargoOnFile} onChange={handleFilterChange} options={yesNoOptions} />
               </div>
-              <div>
-                <FilterLabel>Has Bond Insurance</FilterLabel>
+              <div className={`relative ${isFilterLocked('bondOnFile') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>Has Bond Insurance{isFilterLocked('bondOnFile') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <FilterSelect name="bondOnFile" value={filters.bondOnFile} onChange={handleFilterChange} options={yesNoOptions} />
               </div>
             </FilterGroup>
             <FilterGroup title="Date Range" icon={<Calendar size={12} />}>
-              <div>
-                <FilterLabel>From Date</FilterLabel>
+              <div className={`relative ${isFilterLocked('dateRange') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>From Date{isFilterLocked('dateRange') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-violet-500" />
               </div>
-              <div>
-                <FilterLabel>To Date</FilterLabel>
+              <div className={`relative ${isFilterLocked('dateRange') ? 'opacity-50 pointer-events-none' : ''}`}>
+                <FilterLabel>To Date{isFilterLocked('dateRange') && <Lock size={10} className="inline ml-1 text-amber-500" />}</FilterLabel>
                 <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 outline-none focus:border-violet-500" />
               </div>
