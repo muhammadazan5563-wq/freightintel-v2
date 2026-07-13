@@ -30,7 +30,8 @@ const plans = [
     soloOldPrice: '$69',
     period: '/mo',
     description: 'For growing teams needing serious data.',
-    features: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters', 'Priority Support'],
+    features: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters', 'Priority Support', '4 Users (contact for more)'],
+    soloFeatures: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters', 'Priority Support', '1 User'],
     cta: 'Upgrade to Professional',
     popular: true,
   },
@@ -168,7 +169,7 @@ export const Subscription: React.FC = () => {
 
               {/* Features */}
               <div className="space-y-3.5 flex-1">
-                {plan.features.map((feature, fIdx) => (
+                {(isPro && proMode === 'solo' ? (plan as any).soloFeatures || plan.features : plan.features).map((feature: string, fIdx: number) => (
                   <div key={fIdx} className="flex items-center gap-3">
                     <div
                       className="rounded-full p-1 flex-shrink-0"
