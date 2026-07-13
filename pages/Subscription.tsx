@@ -25,7 +25,7 @@ const plans = [
     price: '$149',
     period: '/mo',
     description: 'For growing teams needing serious data.',
-    features: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters', 'Priority Support'],
+    features: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters','2 Users (for more contact us)', 'Priority Support'],
     cta: 'Upgrade to Professional',
     popular: true,
   },
