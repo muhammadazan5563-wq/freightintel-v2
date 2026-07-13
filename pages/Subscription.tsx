@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Check, Sparkles, Zap } from 'lucide-react';
 
 const plans = [
@@ -26,6 +26,8 @@ const plans = [
     name: 'Professional',
     oldPrice: '$149',
     price: '$75',
+    soloPrice: '$35',
+    soloOldPrice: '$69',
     period: '/mo',
     description: 'For growing teams needing serious data.',
     features: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters', 'Priority Support'],
@@ -45,6 +47,8 @@ const plans = [
 ];
 
 export const Subscription: React.FC = () => {
+  const [proMode, setProMode] = useState<'team' | 'solo'>('team');
+
   return (
     <div className="p-6 lg:p-8 pb-20 overflow-y-auto h-screen animate-fade-up" style={{ opacity: 0, animationFillMode: 'forwards' }}>
       {/* Limited Offer Banner */}
@@ -76,79 +80,113 @@ export const Subscription: React.FC = () => {
 
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-7xl mx-auto">
-        {plans.map((plan, idx) => (
-          <div
-            key={idx}
-            className={`relative flex flex-col transition-all duration-300 ${
-              plan.popular
-                ? 'card-purple text-white scale-[1.03] z-10 shadow-xl'
-                : 'stat-card'
-            }`}
-            style={plan.popular ? { padding: '2rem' } : { padding: '2rem' }}
-          >
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg" style={{ color: '#7C5CFC' }}>
-                <Sparkles size={12} />
-                Most Popular
-              </div>
-            )}
+        {plans.map((plan, idx) => {
+          const isPro = plan.name === 'Professional';
+          const displayPrice = isPro && proMode === 'solo' ? (plan as any).soloPrice : plan.price;
+          const displayOldPrice = isPro && proMode === 'solo' ? (plan as any).soloOldPrice : plan.oldPrice;
 
-            {/* Plan Name & Description */}
-            <div className="mb-6">
-              <h3 className={`heading-display text-xl mb-2 ${plan.popular ? 'text-white' : 'text-slate-900'}`}>
-                {plan.name}
-              </h3>
-              <p className={`text-sm h-10 ${plan.popular ? 'text-white/70' : 'text-slate-500'}`}>
-                {plan.description}
-              </p>
-            </div>
-
-            {/* Price */}
-            <div className="mb-6 flex items-baseline gap-2">
-              <span className={`text-lg line-through ${plan.popular ? 'text-white/50' : 'text-slate-400'}`} style={{ fontFamily: 'Syne, sans-serif' }}>
-                {plan.oldPrice}
-              </span>
-              <span className={`text-4xl font-bold ${plan.popular ? 'text-white' : 'text-slate-900'}`} style={{ fontFamily: 'Syne, sans-serif' }}>
-                {plan.price}
-              </span>
-              <span className={`text-sm ${plan.popular ? 'text-white/60' : 'text-slate-400'}`}>
-                {plan.period}
-              </span>
-            </div>
-
-            {/* CTA Button */}
-            <button
-              onClick={() => window.open('https://api.whatsapp.com/send?phone=966591860764', '_blank')}
-              className={`w-full py-3.5 rounded-xl font-semibold mb-6 transition-all text-sm ${
+          return (
+            <div
+              key={idx}
+              className={`relative flex flex-col transition-all duration-300 ${
                 plan.popular
-                  ? 'bg-white hover:bg-slate-50 shadow-lg'
-                  : 'btn-primary'
+                  ? 'card-purple text-white scale-[1.03] z-10 shadow-xl'
+                  : 'stat-card'
               }`}
-              style={plan.popular ? { color: '#7C5CFC' } : {}}
+              style={plan.popular ? { padding: '2rem' } : { padding: '2rem' }}
             >
-              {plan.cta}
-            </button>
-
-            {/* Features */}
-            <div className="space-y-3.5 flex-1">
-              {plan.features.map((feature, fIdx) => (
-                <div key={fIdx} className="flex items-center gap-3">
-                  <div
-                    className="rounded-full p-1 flex-shrink-0"
-                    style={{
-                      background: plan.popular ? 'rgba(255,255,255,0.2)' : 'rgba(124,92,252,0.08)',
-                    }}
-                  >
-                    <Check size={12} style={{ color: plan.popular ? '#FFFFFF' : '#7C5CFC' }} />
-                  </div>
-                  <span className={`text-sm ${plan.popular ? 'text-white/90' : 'text-slate-600'}`}>
-                    {feature}
-                  </span>
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg" style={{ color: '#7C5CFC' }}>
+                  <Sparkles size={12} />
+                  Most Popular
                 </div>
-              ))}
+              )}
+
+              {/* Plan Name & Description */}
+              <div className="mb-6">
+                <h3 className={`heading-display text-xl mb-2 ${plan.popular ? 'text-white' : 'text-slate-900'}`}>
+                  {plan.name}
+                </h3>
+                <p className={`text-sm h-10 ${plan.popular ? 'text-white/70' : 'text-slate-500'}`}>
+                  {plan.description}
+                </p>
+              </div>
+
+              {/* Solo/Team Toggle for Professional */}
+              {isPro && (
+                <div className="mb-4 flex items-center justify-center gap-1 p-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                  <button
+                    onClick={() => setProMode('solo')}
+                    className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
+                      proMode === 'solo'
+                        ? 'bg-white shadow-sm'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                    style={proMode === 'solo' ? { color: '#7C5CFC' } : {}}
+                  >
+                    Solo
+                  </button>
+                  <button
+                    onClick={() => setProMode('team')}
+                    className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
+                      proMode === 'team'
+                        ? 'bg-white shadow-sm'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                    style={proMode === 'team' ? { color: '#7C5CFC' } : {}}
+                  >
+                    Team
+                  </button>
+                </div>
+              )}
+
+              {/* Price */}
+              <div className="mb-6 flex items-baseline gap-2">
+                <span className={`text-lg line-through ${plan.popular ? 'text-white/50' : 'text-slate-400'}`} style={{ fontFamily: 'Syne, sans-serif' }}>
+                  {displayOldPrice}
+                </span>
+                <span className={`text-4xl font-bold ${plan.popular ? 'text-white' : 'text-slate-900'}`} style={{ fontFamily: 'Syne, sans-serif' }}>
+                  {displayPrice}
+                </span>
+                <span className={`text-sm ${plan.popular ? 'text-white/60' : 'text-slate-400'}`}>
+                  {plan.period}
+                </span>
+              </div>
+
+              {/* CTA Button */}
+              <button
+                onClick={() => window.open('https://api.whatsapp.com/send?phone=966591860764', '_blank')}
+                className={`w-full py-3.5 rounded-xl font-semibold mb-6 transition-all text-sm ${
+                  plan.popular
+                    ? 'bg-white hover:bg-slate-50 shadow-lg'
+                    : 'btn-primary'
+                }`}
+                style={plan.popular ? { color: '#7C5CFC' } : {}}
+              >
+                {plan.cta}
+              </button>
+
+              {/* Features */}
+              <div className="space-y-3.5 flex-1">
+                {plan.features.map((feature, fIdx) => (
+                  <div key={fIdx} className="flex items-center gap-3">
+                    <div
+                      className="rounded-full p-1 flex-shrink-0"
+                      style={{
+                        background: plan.popular ? 'rgba(255,255,255,0.2)' : 'rgba(124,92,252,0.08)',
+                      }}
+                    >
+                      <Check size={12} style={{ color: plan.popular ? '#FFFFFF' : '#7C5CFC' }} />
+                    </div>
+                    <span className={`text-sm ${plan.popular ? 'text-white/90' : 'text-slate-600'}`}>
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Footer */}
