@@ -71,7 +71,7 @@ export const registerUser = async (
   password: string,
   userId?: string,
   ipAddress?: string
-): Promise<{ token: string; user: any } | null> => {
+): Promise<{ token?: string; user?: any; requires_otp?: boolean; message?: string } | null> => {
   try {
     const body: any = { name, email, password };
     if (userId) body.user_id = userId;
@@ -88,6 +88,44 @@ export const registerUser = async (
     return data;
   } catch (err: any) {
     console.error('Register error:', err);
+    return null;
+  }
+};
+
+export const verifyOtp = async (
+  email: string,
+  code: string
+): Promise<{ token: string; user: any } | null> => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    const data = await handleResponse(response);
+    if (data.token) {
+      setToken(data.token);
+    }
+    return data;
+  } catch (err: any) {
+    console.error('Verify OTP error:', err);
+    return null;
+  }
+};
+
+export const resendOtp = async (
+  email: string
+): Promise<{ success: boolean; message?: string } | null> => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/auth/resend-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await handleResponse(response);
+    return data;
+  } catch (err: any) {
+    console.error('Resend OTP error:', err);
     return null;
   }
 };
