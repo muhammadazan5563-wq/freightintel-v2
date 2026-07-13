@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { User } from '../types';
 import { updateUserInSupabase, isIPBlocked } from '../services/userService';
-import { loginUser, registerUser } from '../services/backendApiService';
+import { loginUser, registerUser, verifyOtp, resendOtp } from '../services/backendApiService';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -133,6 +133,10 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [countersStarted, setCountersStarted] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
   const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -143,7 +147,15 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
 
   useEffect(() => {
     setEmail(''); setPassword(''); setName(''); setError(null);
+    setShowOtp(false); setOtpCode(''); setOtpEmail('');
   }, [authMode]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const c1 = useCounter(4200000, 2000, countersStarted);
   const c2 = useCounter(1000, 1500, countersStarted);
@@ -183,18 +195,68 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
       } else {
         const result = await registerUser(name, email.toLowerCase(), password, `user-${Date.now()}`, clientIp);
         if (!result) { setError("Failed to create account. Email may already be in use."); return; }
-        const row = result.user;
-        const createdUser: User = {
-          id: row.user_id, name: row.name, email: row.email, role: row.role || 'user',
-          plan: row.plan || 'Free', dailyLimit: row.daily_limit || 50,
-          recordsExtractedToday: row.records_extracted_today || 0,
-          lastActive: 'Now', ipAddress: row.ip_address || clientIp, isOnline: true, isBlocked: false,
-        };
-        onLogin(createdUser);
+        // Check if OTP verification is required
+        if (result.requires_otp) {
+          setOtpEmail(email.toLowerCase());
+          setShowOtp(true);
+          setResendCooldown(60);
+        } else if (result.user) {
+          // Fallback: direct login if backend doesn't require OTP
+          const row = result.user;
+          const createdUser: User = {
+            id: row.user_id, name: row.name, email: row.email, role: row.role || 'user',
+            plan: row.plan || 'Free', dailyLimit: row.daily_limit || 50,
+            recordsExtractedToday: row.records_extracted_today || 0,
+            lastActive: 'Now', ipAddress: row.ip_address || clientIp, isOnline: true, isBlocked: false,
+          };
+          onLogin(createdUser);
+        }
       }
     } catch (err) {
       console.error('Auth error:', err);
       setError("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    try {
+      const result = await verifyOtp(otpEmail, otpCode);
+      if (!result) { setError("Invalid or expired verification code. Please try again."); return; }
+      const row = result.user;
+      const createdUser: User = {
+        id: row.user_id, name: row.name, email: row.email, role: row.role || 'user',
+        plan: row.plan || 'Professional', dailyLimit: row.daily_limit || 100000,
+        recordsExtractedToday: row.records_extracted_today || 0,
+        lastActive: 'Now', ipAddress: row.ip_address || '', isOnline: true, isBlocked: false,
+      };
+      onLogin(createdUser);
+    } catch (err) {
+      console.error('OTP verify error:', err);
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setError(null);
+    setIsLoading(true);
+    try {
+      const result = await resendOtp(otpEmail);
+      if (!result || !result.success) {
+        setError("Failed to resend code. Please try again.");
+      } else {
+        setResendCooldown(60);
+        setError(null);
+      }
+    } catch (err) {
+      setError("Failed to resend code. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -653,78 +715,153 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
       {authMode && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(10px)' }}>
           <div style={{ background: '#FFFFFF', borderRadius: 24, padding: 40, maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ ...S, fontSize: 24, fontWeight: 700, color: '#0F172A' }}>{authMode === 'login' ? 'Sign In' : 'Create Account'}</h2>
-              <button onClick={() => setAuthMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <X size={20} color="#94A3B8" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAuth}>
-              {authMode === 'register' && (
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 6 }}>Full Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}
-                    placeholder="John Doe"
-                  />
+            {showOtp ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <h2 style={{ ...S, fontSize: 24, fontWeight: 700, color: '#0F172A' }}>Verify Email</h2>
+                  <button onClick={() => setAuthMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <X size={20} color="#94A3B8" />
+                  </button>
                 </div>
-              )}
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 6 }}>Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}
-                  placeholder="you@example.com"
-                />
-              </div>
-
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 6 }}>Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}
-                  placeholder="••••••••"
-                />
-              </div>
-
-              {error && (
-                <div style={{ padding: 12, borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626', fontSize: 13, marginBottom: 16 }}>
-                  {error}
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(124,92,252,0.1)', border: '1px solid rgba(124,92,252,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                    <Mail size={24} style={{ color: '#7C5CFC' }} />
+                  </div>
+                  <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.6 }}>
+                    We sent a 6-digit verification code to<br />
+                    <strong style={{ color: '#1E293B' }}>{otpEmail}</strong>
+                  </p>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: 10, background: 'linear-gradient(135deg, #7C5CFC, #9B7EFD)', border: 'none', color: 'white', fontSize: 15, fontWeight: 700, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1, fontFamily: 'DM Sans, sans-serif' }}
-              >
-                {isLoading ? 'Loading...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            </form>
+                <form onSubmit={handleVerifyOtp}>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 6 }}>Verification Code</label>
+                    <input
+                      type="text"
+                      value={otpCode}
+                      onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      required
+                      maxLength={6}
+                      style={{ width: '100%', padding: '14px 16px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', fontSize: 24, fontFamily: 'monospace', textAlign: 'center', letterSpacing: '8px', fontWeight: 700 }}
+                      placeholder="000000"
+                      autoFocus
+                    />
+                  </div>
 
-            <div style={{ textAlign: 'center', marginTop: 20 }}>
-              <span style={{ fontSize: 13, color: '#94A3B8' }}>
-                {authMode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-                <button
-                  onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                  style={{ background: 'none', border: 'none', color: '#7C5CFC', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
-                >
-                  {authMode === 'login' ? 'Sign Up' : 'Sign In'}
-                </button>
-              </span>
-            </div>
+                  {error && (
+                    <div style={{ padding: 12, borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626', fontSize: 13, marginBottom: 16 }}>
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || otpCode.length !== 6}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: 10, background: 'linear-gradient(135deg, #7C5CFC, #9B7EFD)', border: 'none', color: 'white', fontSize: 15, fontWeight: 700, cursor: (isLoading || otpCode.length !== 6) ? 'not-allowed' : 'pointer', opacity: (isLoading || otpCode.length !== 6) ? 0.7 : 1, fontFamily: 'DM Sans, sans-serif' }}
+                  >
+                    {isLoading ? 'Verifying...' : 'Verify & Create Account'}
+                  </button>
+                </form>
+
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                  <span style={{ fontSize: 13, color: '#94A3B8' }}>
+                    {"Didn't receive the code? "}
+                    <button
+                      onClick={handleResendOtp}
+                      disabled={resendCooldown > 0}
+                      style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? '#CBD5E1' : '#7C5CFC', cursor: resendCooldown > 0 ? 'default' : 'pointer', fontWeight: 600, fontSize: 13 }}
+                    >
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
+                    </button>
+                  </span>
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: 12 }}>
+                  <button
+                    onClick={() => { setShowOtp(false); setOtpCode(''); setError(null); }}
+                    style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}
+                  >
+                    ← Back to registration
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <h2 style={{ ...S, fontSize: 24, fontWeight: 700, color: '#0F172A' }}>{authMode === 'login' ? 'Sign In' : 'Create Account'}</h2>
+                  <button onClick={() => setAuthMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <X size={20} color="#94A3B8" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAuth}>
+                  {authMode === 'register' && (
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 6 }}>Full Name</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 6 }}>Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 6 }}>Password</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}
+                      placeholder="••••••••"
+                    />
+                  </div>
+
+                  {error && (
+                    <div style={{ padding: 12, borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626', fontSize: 13, marginBottom: 16 }}>
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: 10, background: 'linear-gradient(135deg, #7C5CFC, #9B7EFD)', border: 'none', color: 'white', fontSize: 15, fontWeight: 700, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1, fontFamily: 'DM Sans, sans-serif' }}
+                  >
+                    {isLoading ? 'Loading...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
+                  </button>
+                </form>
+
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                  <span style={{ fontSize: 13, color: '#94A3B8' }}>
+                    {authMode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+                    <button
+                      onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                      style={{ background: 'none', border: 'none', color: '#7C5CFC', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                    >
+                      {authMode === 'login' ? 'Sign Up' : 'Sign In'}
+                    </button>
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
