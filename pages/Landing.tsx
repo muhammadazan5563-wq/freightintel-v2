@@ -278,8 +278,8 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, borderBottom: '1px solid rgba(0,0,0,0.06)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 12, background: 'linear-gradient(135deg, #7C5CFC, #A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(124,92,252,0.25)' }}>
-              <Truck size={16} color="white" />
+            <div style={{ width: 36, height: 36, borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 16px rgba(124,92,252,0.25)' }}>
+              <img src="/logo.jpeg" alt="FreightIntel Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <span style={{ ...S, fontSize: 17, fontWeight: 700, color: '#0F172A' }}>FreightIntel</span>
           </div>
@@ -697,8 +697,8 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
       <footer style={{ position: 'relative', zIndex: 1, borderTop: '1px solid rgba(0,0,0,0.06)', padding: '40px 24px', background: '#F8F9FC' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg, #7C5CFC, #A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Truck size={14} color="white" />
+            <div style={{ width: 32, height: 32, borderRadius: 10, overflow: 'hidden' }}>
+              <img src="/logo.jpeg" alt="FreightIntel Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <span style={{ ...S, fontSize: 15, fontWeight: 700, color: '#0F172A' }}>FreightIntel</span>
           </div>
