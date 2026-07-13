@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Check, Sparkles, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Check, Sparkles, Zap, Clock } from 'lucide-react';
 
 const plans = [
   {
@@ -50,6 +50,43 @@ const plans = [
 export const Subscription: React.FC = () => {
   const [proMode, setProMode] = useState<'team' | 'solo'>('team');
 
+  // 3-day countdown timer
+  const [timeLeft, setTimeLeft] = useState({ days: 3, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 3);
+    endDate.setHours(23, 59, 59, 999);
+
+    const storedEnd = localStorage.getItem('offer_end_date');
+    const targetDate = storedEnd ? new Date(storedEnd) : endDate;
+
+    if (!storedEnd) {
+      localStorage.setItem('offer_end_date', endDate.toISOString());
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const distance = targetDate.getTime() - now;
+
+      if (distance <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000),
+      });
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="p-6 lg:p-8 pb-20 overflow-y-auto h-screen animate-fade-up" style={{ opacity: 0, animationFillMode: 'forwards' }}>
       {/* Limited Offer Banner */}
@@ -62,6 +99,12 @@ export const Subscription: React.FC = () => {
             <span className="bg-white/20 backdrop-blur-sm text-white text-sm font-semibold px-3 py-1 rounded-full">
               50% OFF All Plans
             </span>
+            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+              <Clock size={14} className="text-white" />
+              <span className="text-white text-sm font-bold tabular-nums">
+                {timeLeft.days}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m {String(timeLeft.seconds).padStart(2, '0')}s
+              </span>
+            </div>
             <Zap size={20} className="text-yellow-300 animate-pulse" />
           </div>
         </div>
