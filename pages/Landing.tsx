@@ -281,7 +281,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
             <div style={{ width: 36, height: 36, borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 16px rgba(124,92,252,0.25)' }}>
               <img src="/logo.jpeg" alt="FreightIntel Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            <span style={{ ...S, fontSize: 17, fontWeight: 700, color: '#0F172A' }}>FreightIntel</span>
+            <span style={{ ...S, fontSize: 17, fontWeight: 700, color: '#0F172A' }}>FreightIntel<span style={{ background: 'linear-gradient(135deg, #7C5CFC, #A78BFA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Pro</span></span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={() => setAuthMode('login')} style={{ padding: '8px 16px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(0,0,0,0.1)', color: '#64748B', fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'DM Sans, sans-serif' }}
@@ -700,7 +700,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
             <div style={{ width: 32, height: 32, borderRadius: 10, overflow: 'hidden' }}>
               <img src="/logo.jpeg" alt="FreightIntel Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            <span style={{ ...S, fontSize: 15, fontWeight: 700, color: '#0F172A' }}>FreightIntel</span>
+            <span style={{ ...S, fontSize: 15, fontWeight: 700, color: '#0F172A' }}>FreightIntel<span style={{ background: 'linear-gradient(135deg, #7C5CFC, #A78BFA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Pro</span></span>
           </div>
           <div style={{ display: 'flex', gap: 24 }}>
             {['Privacy Policy', 'Terms of Service', 'Support'].map(l => (
