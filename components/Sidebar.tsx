@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, u
         </div>
         {!collapsed && (
           <div className="flex-1">
-            <span className="heading-display text-[15px] text-slate-800 tracking-tight">FreightIntel<span className="bg-gradient-to-r from-[#7C5CFC] to-[#A78BFA] bg-clip-text text-transparent">Pro</span></span>
+            <span className="heading-display text-[15px] text-slate-800 tracking-tight">FreightIntel<span className="bg-gradient-to-r from-[#7C5CFC] to-[#A78BFA] bg-clip-text text-transparent text-[8px]">Pro</span></span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="dot-live" style={{width:6,height:6}}></span>
               <span className="text-[10px] text-emerald-600 font-medium">Live</span>
