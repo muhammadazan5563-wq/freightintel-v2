@@ -1,10 +1,11 @@
 import React from 'react';
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Sparkles, Zap } from 'lucide-react';
 
 const plans = [
   {
     name: 'Basic',
-    price: '$49',
+    oldPrice: '$49',
+    price: '$25',
     period: '/mo',
     description: 'Core access for getting started.',
     features: ['Dashboard', 'Carrier Database', 'Settings & Subscription', 'Page size fixed at 500'],
@@ -13,7 +14,8 @@ const plans = [
   },
   {
     name: 'Essential',
-    price: '$99',
+    oldPrice: '$99',
+    price: '$50',
     period: '/mo',
     description: 'For small brokerages that need more reach.',
     features: ['Everything in Basic', 'FMCSA Register', 'Advanced Filters', 'Adjustable page size'],
@@ -22,16 +24,18 @@ const plans = [
   },
   {
     name: 'Professional',
-    price: '$149',
+    oldPrice: '$149',
+    price: '$75',
     period: '/mo',
     description: 'For growing teams needing serious data.',
-    features: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters','2 Users (for more contact us)', 'Priority Support'],
+    features: ['Everything in Essential', 'New Ventures', 'Full Advanced Filters', 'Priority Support'],
     cta: 'Upgrade to Professional',
     popular: true,
   },
   {
     name: 'Insurance',
-    price: '$499',
+    oldPrice: '$499',
+    price: '$250',
     period: '/mo',
     description: 'Full access for large logistics & insurance firms.',
     features: ['Everything unlocked', 'Inspections, Safety & Insurance data', 'Officer names visible', 'Scraper & Pipeline tools'],
@@ -43,6 +47,21 @@ const plans = [
 export const Subscription: React.FC = () => {
   return (
     <div className="p-6 lg:p-8 pb-20 overflow-y-auto h-screen animate-fade-up" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+      {/* Limited Offer Banner */}
+      <div className="max-w-3xl mx-auto mb-8">
+        <div className="relative overflow-hidden rounded-2xl px-6 py-4 text-center" style={{ background: 'linear-gradient(135deg, #7C5CFC 0%, #9B7EFD 50%, #B69FFF 100%)' }}>
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 50%, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+          <div className="relative flex items-center justify-center gap-3 flex-wrap">
+            <Zap size={20} className="text-yellow-300 animate-pulse" />
+            <span className="text-white font-bold text-lg tracking-wide">LIMITED TIME OFFER</span>
+            <span className="bg-white/20 backdrop-blur-sm text-white text-sm font-semibold px-3 py-1 rounded-full">
+              50% OFF All Plans
+            </span>
+            <Zap size={20} className="text-yellow-300 animate-pulse" />
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto mb-14">
         <p className="section-label mb-3" style={{ color: '#7C5CFC', letterSpacing: '0.12em' }}>Pricing Plans</p>
@@ -85,7 +104,10 @@ export const Subscription: React.FC = () => {
             </div>
 
             {/* Price */}
-            <div className="mb-6">
+            <div className="mb-6 flex items-baseline gap-2">
+              <span className={`text-lg line-through ${plan.popular ? 'text-white/50' : 'text-slate-400'}`} style={{ fontFamily: 'Syne, sans-serif' }}>
+                {plan.oldPrice}
+              </span>
               <span className={`text-4xl font-bold ${plan.popular ? 'text-white' : 'text-slate-900'}`} style={{ fontFamily: 'Syne, sans-serif' }}>
                 {plan.price}
               </span>
