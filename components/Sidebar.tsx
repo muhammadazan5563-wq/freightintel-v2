@@ -69,12 +69,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, u
     <aside className={`${collapsed ? 'w-[72px]' : 'w-60'} sidebar-bg flex flex-col h-screen fixed left-0 top-0 z-10 transition-all duration-300`}>
       {/* Logo */}
       <div className={`${collapsed ? 'px-3' : 'px-5'} py-5 flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-        <div className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-md flex-shrink-0" style={{background: 'linear-gradient(135deg, #7C5CFC, #9B7EFD)', boxShadow: '0 4px 12px rgba(124,92,252,0.3)'}}>
-          <Truck className="w-4 h-4 text-white" />
+        <div className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-md flex-shrink-0 overflow-hidden">
+          <img src="/logo.jpeg" alt="FreightIntel Logo" className="w-full h-full object-cover rounded-2xl" />
         </div>
         {!collapsed && (
           <div className="flex-1">
-            <span className="heading-display text-[15px] text-slate-800 tracking-tight">FreightIntel</span>
+            <span className="heading-display text-[15px] text-slate-800 tracking-tight">FreightIntel<span className="bg-gradient-to-r from-[#7C5CFC] to-[#A78BFA] bg-clip-text text-transparent">Pro</span></span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="dot-live" style={{width:6,height:6}}></span>
               <span className="text-[10px] text-emerald-600 font-medium">Live</span>
