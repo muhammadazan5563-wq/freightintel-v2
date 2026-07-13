@@ -96,6 +96,7 @@ export const Subscription: React.FC = () => {
 
             {/* CTA Button */}
             <button
+              onClick={() => window.open('https://api.whatsapp.com/send?phone=966591860764', '_blank')}
               className={`w-full py-3.5 rounded-xl font-semibold mb-6 transition-all text-sm ${
                 plan.popular
                   ? 'bg-white hover:bg-slate-50 shadow-lg'
@@ -134,7 +135,7 @@ export const Subscription: React.FC = () => {
           Secure payment processing via Stripe. Cancel anytime.
           <br />
           Need a custom data solution?{' '}
-          <a href="#" className="font-medium hover:underline" style={{ color: '#7C5CFC' }}>
+          <a href="https://api.whatsapp.com/send?phone=966591860764" target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: '#7C5CFC' }}>
             Chat with us.
           </a>
         </p>
