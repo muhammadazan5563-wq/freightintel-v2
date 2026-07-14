@@ -8,6 +8,7 @@ import {
 import { User } from '../types';
 import { updateUserInSupabase, isIPBlocked } from '../services/userService';
 import { loginUser, registerUser, verifyOtp, resendOtp } from '../services/backendApiService';
+import { Subscription } from './Subscription';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -288,6 +289,19 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
               <img src="/logo.jpeg" alt="FreightIntel Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <span style={{ ...S, fontSize: 17, fontWeight: 700, color: '#0F172A' }}>FreightIntel<span style={{ background: 'linear-gradient(135deg, #7C5CFC, #A78BFA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '9px' }}>Pro</span></span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+              onClick={() => {
+                const el = document.getElementById('landing-plans-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              style={{ padding: '8px 18px', borderRadius: 10, background: 'transparent', border: 'none', color: '#7C5CFC', fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.02em' }}
+              onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,92,252,0.06)'; }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+            >
+              Plan
+            </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={() => setAuthMode('login')} style={{ padding: '8px 16px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(0,0,0,0.1)', color: '#64748B', fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'DM Sans, sans-serif' }}
@@ -650,6 +664,11 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* ── PLANS / SUBSCRIPTION ── */}
+      <section id="landing-plans-section" style={{ position: 'relative', zIndex: 1, padding: '80px 24px' }}>
+        <Subscription />
       </section>
 
       {/* ── FAQ ── */}
