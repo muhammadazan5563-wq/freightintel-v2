@@ -300,7 +300,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
               onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,92,252,0.06)'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
             >
-              Plan
+              Plans
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
