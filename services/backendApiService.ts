@@ -501,6 +501,7 @@ export const fetchUsersFromBackend = async (): Promise<User[]> => {
       isOnline: row.is_online || false,
       isBlocked: row.is_blocked || false,
       allowedIps: row.allowed_ips || [],
+      hasMailerAccess: row.has_mailer_access || false,
       created_at: row.created_at,
       updated_at: row.updated_at,
     }));
@@ -527,6 +528,7 @@ export const fetchUserByEmailFromBackend = async (email: string): Promise<User |
       isOnline: row.is_online || false,
       isBlocked: row.is_blocked || false,
       allowedIps: row.allowed_ips || [],
+      hasMailerAccess: row.has_mailer_access || false,
       created_at: row.created_at,
       updated_at: row.updated_at,
     };
@@ -606,6 +608,7 @@ export const updateUserInBackend = async (user: User): Promise<boolean> => {
         is_online: user.isOnline,
         is_blocked: user.isBlocked,
         allowed_ips: user.allowedIps || [],
+        has_mailer_access: user.hasMailerAccess || false,
       };
     } else {
       // Non-admin self-update: only send allowed fields
