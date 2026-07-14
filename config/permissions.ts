@@ -96,7 +96,7 @@ export const PLAN_PERMISSIONS: Record<PlanName, PlanPermissions> = {
 
 // Admin role: full access to everything. Used as an override regardless of plan.
 export const ADMIN_PERMISSIONS: PlanPermissions = {
-  pages: [...INSURANCE_PAGES, 'admin'],
+  pages: [...INSURANCE_PAGES, 'admin', 'mailer'],
   blurInspectionsCrashes: false,
   blurSafety: false,
   blurInsuranceHistory: false,
@@ -111,12 +111,23 @@ export const ADMIN_PERMISSIONS: PlanPermissions = {
 interface UserLike {
   role?: string;
   plan?: string;
+  hasMailerAccess?: boolean;
 }
 
 export const getPermissions = (user: UserLike | null | undefined): PlanPermissions => {
   if (user?.role === 'admin') return ADMIN_PERMISSIONS;
   const plan = (user?.plan as PlanName) || 'Insurance';
-  return PLAN_PERMISSIONS[plan] || PLAN_PERMISSIONS.Insurance;
+  const perms = PLAN_PERMISSIONS[plan] || PLAN_PERMISSIONS.Insurance;
+  
+  // If user has mailer access granted by admin, add 'mailer' to their pages
+  if (user?.hasMailerAccess) {
+    return {
+      ...perms,
+      pages: [...perms.pages, 'mailer'],
+    };
+  }
+  
+  return perms;
 };
 
 export const canAccessPage = (user: UserLike | null | undefined, page: ViewState): boolean => {
