@@ -11,6 +11,7 @@ import { AdminPanel } from './pages/AdminPanel';
 import { FMCSARegister } from './pages/FMCSARegister';
 import { NewVenture } from './pages/NewVenture';
 import { InsuranceScraper } from './pages/InsuranceScraper';
+import { MailerPage } from './pages/MailerPage';
 import { ViewState, User, CarrierData } from './types';
 import { Settings as SettingsIcon } from 'lucide-react';
 import { updateUserInSupabase } from './services/userService';
@@ -192,6 +193,8 @@ const App: React.FC = () => {
             autoStart={false}
           />
         );
+      case 'mailer':
+        return <MailerPage user={user} />;
       case 'subscription':
         return <Subscription />;
       case 'settings':
