@@ -88,7 +88,7 @@ export const Subscription: React.FC = () => {
   }, []);
 
   return (
-    <div className="p-6 lg:p-8 pb-20 overflow-y-auto h-screen animate-fade-up" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+    <div className="p-6 lg:p-8 pb-20 animate-fade-up" style={{ opacity: 0, animationFillMode: 'forwards' }}>
       {/* Limited Offer Banner */}
       <div className="max-w-3xl mx-auto mb-8">
         <div className="relative overflow-hidden rounded-2xl px-6 py-4 text-center" style={{ background: 'linear-gradient(135deg, #7C5CFC 0%, #9B7EFD 50%, #B69FFF 100%)' }}>
