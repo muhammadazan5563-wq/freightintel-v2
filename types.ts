@@ -139,13 +139,14 @@ export interface User {
   isOnline: boolean;
   isBlocked?: boolean;
   allowedIps?: string[];
+  hasMailerAccess?: boolean;
 }
 export interface BlockedIP {
   ip: string;
   blockedAt: string;
   reason: string;
 }
-export type ViewState = 'dashboard' | 'scraper' | 'carrier-search' | 'renewal-policies' | 'mid-term-cancellation' | 'insurance-scraper' | 'subscription' | 'settings' | 'admin' | 'fmcsa-register' | 'new-venture';
+export type ViewState = 'dashboard' | 'scraper' | 'carrier-search' | 'renewal-policies' | 'mid-term-cancellation' | 'insurance-scraper' | 'subscription' | 'settings' | 'admin' | 'fmcsa-register' | 'new-venture' | 'mailer';
 export interface FMCSARegisterEntry {
   number: string;
   title: string;
