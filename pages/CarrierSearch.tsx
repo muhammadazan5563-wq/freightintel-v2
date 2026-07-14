@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Eye, X, MapPin, Phone, Mail, Hash, Truck, Calendar, ShieldCheck, Download, ShieldAlert, Activity, Info, Globe, Map as MapIcon, Boxes, Shield, ExternalLink, CheckCircle2, AlertTriangle, Zap, Loader2, ChevronDown, ChevronUp, Copy, Check, Database, Lock } from 'lucide-react';
 import { CarrierData, InsuranceHistoryFiling, User } from '../types';
 import { downloadCSV } from '../services/mockService';
@@ -7,6 +7,7 @@ import { fetchSafetyByDot, fetchInspectionsByDot, fetchCrashesByDot } from '../s
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPermissions } from '../config/permissions';
 import { EquipmentPanel } from '../components/EquipmentPanel';
+import { ExportToMailerModal } from '../components/ExportToMailerModal';
 interface CarrierSearchProps {
   user: User;
   onNavigateToInsurance: () => void;
@@ -280,6 +281,9 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
   const [totalCount, setTotalCount] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showMailerModal, setShowMailerModal] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
   
   const PAGE_SIZE_OPTIONS = perms.fixedPageSize ? [perms.fixedPageSize] : [100, 200, 500, 1000];
   const [pageSize, setPageSize] = useState(perms.fixedPageSize ?? 500);
@@ -346,6 +350,17 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
     towawayMin: '', towawayMax: '',
     inspectionsMin: '', inspectionsMax: '',
   });
+  // Close export dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target as Node)) {
+        setShowExportDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleCopy = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
@@ -540,14 +555,42 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
           >
             <ShieldAlert size={16} /> Batch Enrichment Pipeline
           </button>
-          <button
-            onClick={() => { if (perms.canExport) downloadCSV(carriers); }}
-            disabled={carriers.length === 0 || !perms.canExport}
-            title={!perms.canExport ? 'Export is not available on your plan' : undefined}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 rounded-xl text-sm font-bold transition-all border border-slate-200 active:scale-95"
-          >
-            {perms.canExport ? <Download size={16} /> : <Lock size={16} />} Export CSV
-          </button>
+          <div className="relative" ref={exportDropdownRef}>
+            <button
+              onClick={() => { if (perms.canExport) setShowExportDropdown(!showExportDropdown); }}
+              disabled={carriers.length === 0 || !perms.canExport}
+              title={!perms.canExport ? 'Export is not available on your plan' : undefined}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 rounded-xl text-sm font-bold transition-all border border-slate-200 active:scale-95"
+            >
+              {perms.canExport ? <Download size={16} /> : <Lock size={16} />} Export CSV
+              {perms.canExport && <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />}
+            </button>
+            {showExportDropdown && (
+              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                <button
+                  onClick={() => {
+                    downloadCSV(carriers);
+                    setShowExportDropdown(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                >
+                  <Download size={15} className="text-slate-400" />
+                  <span className="font-medium">Export to CSV</span>
+                </button>
+                <div className="h-px bg-slate-100" />
+                <button
+                  onClick={() => {
+                    setShowMailerModal(true);
+                    setShowExportDropdown(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-[#F5F3FF] transition-colors text-left"
+                >
+                  <Mail size={15} className="text-[#7C5CFC]" />
+                  <span className="font-medium">Export to Equinox Mailer</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -973,6 +1016,14 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
       )}
 
       {/* ====== CARRIER DETAIL MODAL ====== */}
+      {/* Export to Equinox Mailer Modal */}
+      <ExportToMailerModal
+        isOpen={showMailerModal}
+        onClose={() => setShowMailerModal(false)}
+        carriers={carriers}
+        userEmail={user.email}
+      />
+
       {selectedCarrier && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-[#F8FAFC] w-full max-w-7xl max-h-[95vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in slide-in-from-bottom-4 duration-300">
