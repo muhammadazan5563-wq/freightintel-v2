@@ -188,6 +188,8 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
           id: row.user_id, name: row.name, email: row.email, role: row.role, plan: row.plan,
           dailyLimit: row.daily_limit, recordsExtractedToday: row.records_extracted_today,
           lastActive: 'Now', ipAddress: row.ip_address || clientIp, isOnline: true, isBlocked: row.is_blocked || false,
+          allowedIps: row.allowed_ips || [],
+          hasMailerAccess: row.has_mailer_access || false,
         };
         if (loggedInUser.isBlocked) { setError("Your account has been blocked. Please contact support."); return; }
         updateUserInSupabase({ ...loggedInUser, isOnline: true, lastActive: 'Now', ipAddress: clientIp || loggedInUser.ipAddress }).catch(console.error);
@@ -208,6 +210,8 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
             plan: row.plan || 'Free', dailyLimit: row.daily_limit || 50,
             recordsExtractedToday: row.records_extracted_today || 0,
             lastActive: 'Now', ipAddress: row.ip_address || clientIp, isOnline: true, isBlocked: false,
+            allowedIps: row.allowed_ips || [],
+            hasMailerAccess: row.has_mailer_access || false,
           };
           onLogin(createdUser);
         }
@@ -233,6 +237,8 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
         plan: row.plan || 'Professional', dailyLimit: row.daily_limit || 100000,
         recordsExtractedToday: row.records_extracted_today || 0,
         lastActive: 'Now', ipAddress: row.ip_address || '', isOnline: true, isBlocked: false,
+        allowedIps: row.allowed_ips || [],
+        hasMailerAccess: row.has_mailer_access || false,
       };
       onLogin(createdUser);
     } catch (err) {
