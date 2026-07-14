@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Truck, CreditCard, Settings, Terminal, LogOut, ShieldAlert, Database, ShieldCheck, Rocket, ChevronRight, ChevronLeft, Menu } from 'lucide-react';
+import { LayoutDashboard, Truck, CreditCard, Settings, Terminal, LogOut, ShieldAlert, Database, ShieldCheck, Rocket, ChevronRight, ChevronLeft, Menu, Mail } from 'lucide-react';
 import { ViewState, User } from '../types';
 import { canAccessPage } from '../config/permissions';
 
@@ -22,6 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, u
     { id: 'mid-term-cancellation', label: 'Mid Term Cancellation', icon: Database, group: 'main' },
     { id: 'new-venture', label: 'New Ventures', icon: Rocket, group: 'main' },
     { id: 'fmcsa-register', label: 'FMCSA Register', icon: Database, group: 'main' },
+    { id: 'mailer', label: 'Mailer', icon: Mail, group: 'main' },
     { id: 'subscription', label: 'Subscription', icon: CreditCard, group: 'tools' },
     { id: 'settings', label: 'Settings', icon: Settings, group: 'tools' },
     { id: 'admin', label: 'Admin Panel', icon: ShieldAlert, group: 'tools' },
