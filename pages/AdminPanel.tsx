@@ -360,13 +360,14 @@ export const AdminPanel: React.FC = () => {
                   <th className="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Usage</th>
                   <th className="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">IP Address</th>
                   <th className="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Allowed IPs</th>
+                  <th className="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Mailer</th>
                   <th className="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center text-slate-400">
+                    <td colSpan={10} className="p-8 text-center text-slate-400">
                       {searchTerm ? 'No users found matching your search.' : 'No users in database. Add a user to get started.'}
                     </td>
                   </tr>
@@ -484,6 +485,29 @@ export const AdminPanel: React.FC = () => {
                             </button>
                           )}
                         </div>
+                      </td>
+                      <td className="p-4">
+                        <button
+                          onClick={async () => {
+                            const updated = { ...user, hasMailerAccess: !user.hasMailerAccess };
+                            const success = await updateUserInSupabase(updated);
+                            if (success) {
+                              setUsers(users.map(u => u.id === user.id ? updated : u));
+                              showMessage('success', updated.hasMailerAccess ? 'Mailer access granted' : 'Mailer access revoked');
+                            } else {
+                              showMessage('error', 'Failed to update mailer access');
+                            }
+                          }}
+                          disabled={isSaving}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all disabled:opacity-50 ${
+                            user.hasMailerAccess
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                          }`}
+                          title={user.hasMailerAccess ? 'Click to revoke mailer access' : 'Click to grant mailer access'}
+                        >
+                          {user.hasMailerAccess ? '✓ Enabled' : '✗ Disabled'}
+                        </button>
                       </td>
                       <td className="p-4">
                         <div className="flex gap-2">
