@@ -140,6 +140,7 @@ export interface User {
   isBlocked?: boolean;
   allowedIps?: string[];
   hasMailerAccess?: boolean;
+  trialEnded?: boolean;
 }
 export interface BlockedIP {
   ip: string;
