@@ -22,7 +22,7 @@ function authHeadersGet(): Record<string, string> {
   return {};
 }
 
-export const checkUserBanStatus = async (): Promise<{ allowed: boolean; blocked: boolean; reason: string } | null> => {
+export const checkUserBanStatus = async (): Promise<{ allowed: boolean; blocked: boolean; reason: string; trial_ended?: boolean } | null> => {
   try {
     const token = getToken();
     if (!token) return null;
@@ -182,6 +182,8 @@ export interface User {
   isOnline: boolean;
   isBlocked?: boolean;
   allowedIps?: string[];
+  hasMailerAccess?: boolean;
+  trialEnded?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -502,6 +504,7 @@ export const fetchUsersFromBackend = async (): Promise<User[]> => {
       isBlocked: row.is_blocked || false,
       allowedIps: row.allowed_ips || [],
       hasMailerAccess: row.has_mailer_access || false,
+      trialEnded: row.trial_ended || false,
       created_at: row.created_at,
       updated_at: row.updated_at,
     }));
@@ -609,6 +612,7 @@ export const updateUserInBackend = async (user: User): Promise<boolean> => {
         is_blocked: user.isBlocked,
         allowed_ips: user.allowedIps || [],
         has_mailer_access: user.hasMailerAccess || false,
+        trial_ended: user.trialEnded || false,
       };
     } else {
       // Non-admin self-update: only send allowed fields
