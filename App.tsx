@@ -12,6 +12,7 @@ import { FMCSARegister } from './pages/FMCSARegister';
 import { NewVenture } from './pages/NewVenture';
 import { InsuranceScraper } from './pages/InsuranceScraper';
 import { MailerPage } from './pages/MailerPage';
+import { TrialEndedOverlay } from './components/TrialEndedOverlay';
 import { ViewState, User, CarrierData } from './types';
 import { Settings as SettingsIcon } from 'lucide-react';
 import { updateUserInSupabase } from './services/userService';
@@ -54,6 +55,14 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     const saved = localStorage.getItem('hussfix_sidebar_collapsed');
     return saved === 'true';
+  });
+  const [trialEnded, setTrialEnded] = useState<boolean>(() => {
+    const saved = localStorage.getItem('hussfix_user');
+    if (saved) {
+      const u = JSON.parse(saved);
+      return u.trialEnded || false;
+    }
+    return false;
   });
   useEffect(() => {
     if (user) {
@@ -100,6 +109,22 @@ const App: React.FC = () => {
         setCurrentView('dashboard');
         alert(status.reason || 'Your account has been suspended. Please contact an administrator.');
       }
+      // Check trial_ended status
+      if (status && status.trial_ended) {
+        setTrialEnded(true);
+        if (user) {
+          const updatedUser = { ...user, trialEnded: true };
+          setUser(updatedUser);
+          localStorage.setItem('hussfix_user', JSON.stringify(updatedUser));
+        }
+      } else if (status && !status.trial_ended) {
+        setTrialEnded(false);
+        if (user && user.trialEnded) {
+          const updatedUser = { ...user, trialEnded: false };
+          setUser(updatedUser);
+          localStorage.setItem('hussfix_user', JSON.stringify(updatedUser));
+        }
+      }
     };
 
     // Check immediately on mount (in case user was banned while app was closed)
@@ -113,6 +138,7 @@ const App: React.FC = () => {
 
   const handleLogin = (userData: User) => {
     setUser(userData);
+    setTrialEnded(userData.trialEnded || false);
     setCurrentView(userData.role === 'admin' ? 'admin' : 'dashboard');
   };
   const handleLogout = () => {
@@ -223,6 +249,11 @@ const App: React.FC = () => {
         <main className={`flex-1 ${sidebarCollapsed ? 'ml-[72px]' : 'ml-60'} relative h-screen overflow-y-auto overflow-x-hidden transition-all duration-300`}>
           {user && renderContent()}
         </main>
+
+        {/* Trial Ended Overlay - shown for non-admin users when trial has ended */}
+        {trialEnded && user && user.role !== 'admin' && (
+          <TrialEndedOverlay />
+        )}
       </div>
     </ErrorBoundary>
   );
