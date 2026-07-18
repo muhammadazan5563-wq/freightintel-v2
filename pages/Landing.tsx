@@ -191,6 +191,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin }) => {
           lastActive: 'Now', ipAddress: row.ip_address || clientIp, isOnline: true, isBlocked: row.is_blocked || false,
           allowedIps: row.allowed_ips || [],
           hasMailerAccess: row.has_mailer_access || false,
+          trialEnded: row.trial_ended || false,
         };
         if (loggedInUser.isBlocked) { setError("Your account has been blocked. Please contact support."); return; }
         updateUserInSupabase({ ...loggedInUser, isOnline: true, lastActive: 'Now', ipAddress: clientIp || loggedInUser.ipAddress }).catch(console.error);
