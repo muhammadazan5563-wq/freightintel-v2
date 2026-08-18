@@ -556,39 +556,52 @@ export const CarrierSearch: React.FC<CarrierSearchProps> = ({ user, onNavigateTo
             <ShieldAlert size={16} /> Batch Enrichment Pipeline
           </button>
           <div className="relative" ref={exportDropdownRef}>
-            <button
-              onClick={() => { if (perms.canExport) setShowExportDropdown(!showExportDropdown); }}
-              disabled={carriers.length === 0 || !perms.canExport}
-              title={!perms.canExport ? 'Export is not available on your plan' : undefined}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 rounded-xl text-sm font-bold transition-all border border-slate-200 active:scale-95"
-            >
-              {perms.canExport ? <Download size={16} /> : <Lock size={16} />} Export CSV
-              {perms.canExport && <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />}
-            </button>
-            {showExportDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+            {/* If user only has mailer export (no CSV), show direct mailer button */}
+            {!perms.canExport && perms.canExportToMailer ? (
+              <button
+                onClick={() => { if (carriers.length > 0) setShowMailerModal(true); }}
+                disabled={carriers.length === 0}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-[#F5F3FF] disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 rounded-xl text-sm font-bold transition-all border border-slate-200 active:scale-95"
+              >
+                <Mail size={16} className="text-[#7C5CFC]" /> Export to Equinox Mailer
+              </button>
+            ) : (
+              <>
                 <button
-                  onClick={() => {
-                    downloadCSV(carriers);
-                    setShowExportDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                  onClick={() => { if (perms.canExport) setShowExportDropdown(!showExportDropdown); }}
+                  disabled={carriers.length === 0 || !perms.canExport}
+                  title={!perms.canExport ? 'Export is not available on your plan' : undefined}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 rounded-xl text-sm font-bold transition-all border border-slate-200 active:scale-95"
                 >
-                  <Download size={15} className="text-slate-400" />
-                  <span className="font-medium">Export to CSV</span>
+                  {perms.canExport ? <Download size={16} /> : <Lock size={16} />} Export CSV
+                  {perms.canExport && <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />}
                 </button>
-                <div className="h-px bg-slate-100" />
-                <button
-                  onClick={() => {
-                    setShowMailerModal(true);
-                    setShowExportDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-[#F5F3FF] transition-colors text-left"
-                >
-                  <Mail size={15} className="text-[#7C5CFC]" />
-                  <span className="font-medium">Export to Equinox Mailer</span>
-                </button>
-              </div>
+                {showExportDropdown && (
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                    <button
+                      onClick={() => {
+                        downloadCSV(carriers);
+                        setShowExportDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <Download size={15} className="text-slate-400" />
+                      <span className="font-medium">Export to CSV</span>
+                    </button>
+                    <div className="h-px bg-slate-100" />
+                    <button
+                      onClick={() => {
+                        setShowMailerModal(true);
+                        setShowExportDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-[#F5F3FF] transition-colors text-left"
+                    >
+                      <Mail size={15} className="text-[#7C5CFC]" />
+                      <span className="font-medium">Export to Equinox Mailer</span>
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
