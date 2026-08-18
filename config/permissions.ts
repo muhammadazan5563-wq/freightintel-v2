@@ -25,7 +25,8 @@ export interface PlanPermissions {
   disabledFilters: FilterKey[];         // individual filters disabled
   lockedFilterGroups: string[];         // filter group titles that are collapsed & cannot expand
   // Misc.
-  canExport: boolean;                   // Export CSV
+  canExport: boolean;                   // Export CSV (download file locally)
+  canExportToMailer: boolean;           // Export to Equinox Mailer only
   fixedPageSize: number | null;         // forces a single page size when set
 }
 
@@ -54,6 +55,7 @@ export const PLAN_PERMISSIONS: Record<PlanName, PlanPermissions> = {
     disabledFilters: [],
     lockedFilterGroups: [],
     canExport: false,
+    canExportToMailer: false,
     fixedPageSize: 500,
   },
   Essential: {
@@ -66,6 +68,7 @@ export const PLAN_PERMISSIONS: Record<PlanName, PlanPermissions> = {
     disabledFilters: ['state', 'hasEmail', 'officerName'],
     lockedFilterGroups: ['Insurance Policy', 'Safety'],
     canExport: false,
+    canExportToMailer: false,
     fixedPageSize: null,
   },
   Professional: {
@@ -78,6 +81,7 @@ export const PLAN_PERMISSIONS: Record<PlanName, PlanPermissions> = {
     disabledFilters: [],
     lockedFilterGroups: ['Insurance Policy', 'Safety'],
     canExport: false,
+    canExportToMailer: false,
     fixedPageSize: null,
   },
   Insurance: {
@@ -90,6 +94,7 @@ export const PLAN_PERMISSIONS: Record<PlanName, PlanPermissions> = {
     disabledFilters: [],
     lockedFilterGroups: [],
     canExport: false,
+    canExportToMailer: false,
     fixedPageSize: null,
   },
 };
@@ -105,6 +110,7 @@ export const ADMIN_PERMISSIONS: PlanPermissions = {
   disabledFilters: [],
   lockedFilterGroups: [],
   canExport: true,
+  canExportToMailer: true,
   fixedPageSize: null,
 };
 
@@ -120,10 +126,12 @@ export const getPermissions = (user: UserLike | null | undefined): PlanPermissio
   const perms = PLAN_PERMISSIONS[plan] || PLAN_PERMISSIONS.Insurance;
   
   // If user has mailer access granted by admin, add 'mailer' to their pages
+  // and enable export to Equinox Mailer only (no CSV download)
   if (user?.hasMailerAccess) {
     return {
       ...perms,
       pages: [...perms.pages, 'mailer'],
+      canExportToMailer: true,
     };
   }
   
