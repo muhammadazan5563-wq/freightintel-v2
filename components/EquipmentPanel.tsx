@@ -8,7 +8,7 @@ interface EquipmentItem {
   last_inspection_date: string | null;
   license_plate_state: string;
   license_plate_number: string;
-  equipment_type: string;
+  type: string;
   equipment_sub_type: string;
   created_at: string;
   updated_at: string;
