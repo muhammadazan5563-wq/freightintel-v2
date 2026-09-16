@@ -9,7 +9,7 @@ interface EquipmentItem {
   license_plate_state: string;
   license_plate_number: string;
   type: string;
-  equipment_sub_type: string;
+  sub_type: string;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
