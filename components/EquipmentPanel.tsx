@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, X, Loader2, ChevronDown, ChevronUp, Eye, Package, AlertTriangle, Hash, Calendar, MapPin, Wrench, Fuel, Gauge, Shield, Info, Boxes } from 'lucide-react';
+import { Truck, X, Loader2, Eye, Package, AlertTriangle, Hash, MapPin, Wrench, Fuel, Gauge, Shield, Info, Boxes } from 'lucide-react';
 
 interface EquipmentItem {
   id: number;
@@ -8,8 +8,11 @@ interface EquipmentItem {
   last_inspection_date: string | null;
   license_plate_state: string;
   license_plate_number: string;
-  type: string;
-  sub_type: string;
+  equipment_type: string;
+  equipment_sub_type: string;
+  categories: string;
+  company_vehicle_number: string;
+  vin_errors: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -18,71 +21,90 @@ interface EquipmentItem {
 }
 
 interface VinDetail {
-  id: number;
-  vin: string;
-  make: string;
-  model: string;
-  model_year: string;
-  body_class: string;
-  body_cab_type: string | null;
-  drive_type: string;
-  fuel_type_primary: string;
-  vehicle_type: string;
-  manufacturer: string;
-  plant_country: string;
-  plant_state: string;
-  plant_city: string;
-  plant_company_name: string;
-  series: string | null;
-  series2: string | null;
-  trim: string | null;
-  trim2: string | null;
-  doors: string | null;
-  engine_model: string | null;
-  engine_configuration: string | null;
-  displacement_l: number | null;
-  displacement_cc: number | null;
-  displacement_ci: number | null;
-  transmission_style: string | null;
-  transmission_speeds: string | null;
-  valve_train_design: string | null;
-  engine_cylinders: number | null;
-  engine_hp: string | null;
-  fuel_injection_type: string | null;
-  turbo: string | null;
-  air_bag_loc_curtain: string | null;
-  air_bag_loc_front: string | null;
-  air_bag_loc_knee: string | null;
-  air_bag_loc_side: string | null;
-  air_bag_loc_seat_cushion: string | null;
-  abs: string | null;
-  tpms: string | null;
-  gvwr: string | null;
-  top_speed_mph: string | null;
-  curb_weight_lb: string | null;
-  battery_type: string | null;
-  battery_kwh: string | null;
-  electrification_level: string | null;
-  ev_drive_unit: string | null;
-  seat_belts_all: string | null;
-  seat_rows: string | null;
-  trailer_body_type: string | null;
-  trailer_type: string | null;
-  error_code: string | null;
-  error_text: string | null;
+  id?: number;
+  vin?: string;
+  make?: string | null;
+  model?: string | null;
+  model_year?: string | null;
+  body_class?: string | null;
+  body_cab_type?: string | null;
+  drive_type?: string | null;
+  fuel_type_primary?: string | null;
+  vehicle_type?: string | null;
+  manufacturer?: string | null;
+  plant_country?: string | null;
+  plant_state?: string | null;
+  plant_city?: string | null;
+  plant_company_name?: string | null;
+  series?: string | null;
+  series2?: string | null;
+  trim?: string | null;
+  trim2?: string | null;
+  doors?: string | null;
+  engine_model?: string | null;
+  engine_configuration?: string | null;
+  displacement_l?: number | string | null;
+  displacement_cc?: number | string | null;
+  displacement_ci?: number | string | null;
+  transmission_style?: string | null;
+  transmission_speeds?: string | null;
+  valve_train_design?: string | null;
+  engine_cylinders?: number | string | null;
+  engine_hp?: string | null;
+  fuel_injection_type?: string | null;
+  turbo?: string | null;
+  air_bag_loc_curtain?: string | null;
+  air_bag_loc_front?: string | null;
+  air_bag_loc_knee?: string | null;
+  air_bag_loc_side?: string | null;
+  air_bag_loc_seat_cushion?: string | null;
+  abs?: string | null;
+  tpms?: string | null;
+  gvwr?: string | null;
+  length?: string | null;
+  top_speed_mph?: string | null;
+  curb_weight_lb?: string | null;
+  battery_type?: string | null;
+  battery_kwh?: string | null;
+  electrification_level?: string | null;
+  ev_drive_unit?: string | null;
+  seat_belts_all?: string | null;
+  seat_rows?: string | null;
+  trailer_body_type?: string | null;
+  trailer_type?: string | null;
+  error_code?: string | null;
+  error_text?: string | null;
 }
 
+/**
+ * Raw shape returned by the upstream `/company/{dot}/equipment` endpoint.
+ * The endpoint has two known variants:
+ *  - the "flat" variant: { type, sub_type, vin, license_state, make, ... }
+ *  - the "expanded" variant: { equipment_type, equipment_sub_type, vin_detail, ... }
+ * Every field can be `null`, so nothing here may be assumed to exist.
+ */
+type RawEquipmentItem = Record<string, any>;
+
 interface EquipmentApiResponse {
-  current_page: number;
-  data: EquipmentItem[];
-  last_page: number;
-  total: number;
-  per_page: number;
+  current_page?: number;
+  data?: RawEquipmentItem[];
+  last_page?: number;
+  total?: number;
+  per_page?: number;
+  meta?: {
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+    per_page?: number;
+  };
 }
 
 interface EquipmentPanelProps {
   dotNumber: string;
 }
+
+const MAX_PAGES = 50;
+const UNKNOWN_TYPE = 'UNKNOWN';
 
 const val = (v: any): string => {
   if (v === undefined || v === null) return '–';
@@ -90,47 +112,154 @@ const val = (v: any): string => {
   return s ? s : '–';
 };
 
-const getEquipmentIcon = (type: string) => {
-  const upper = type.toUpperCase();
-  if (upper.includes('TRUCK') || upper.includes('TRACTOR')) return <Truck size={16} className="text-[#7C5CFC]" />;
-  if (upper.includes('TRAILER')) return <Package size={16} className="text-amber-500" />;
+/** Null-safe string coercion — never throws on null/undefined values. */
+const str = (v: any): string => (v === undefined || v === null ? '' : String(v).trim());
+
+/** Null-safe uppercase — replaces every direct `.toUpperCase()` on API data. */
+const upper = (v: any): string => str(v).toUpperCase();
+
+const isTruckLike = (type: any): boolean => {
+  const u = upper(type);
+  return u.includes('TRUCK') || u.includes('TRACTOR');
+};
+
+const isTrailerLike = (type: any): boolean => upper(type).includes('TRAILER');
+
+const getEquipmentIcon = (type: any) => {
+  if (isTruckLike(type)) return <Truck size={16} className="text-[#7C5CFC]" />;
+  if (isTrailerLike(type)) return <Package size={16} className="text-amber-500" />;
   return <Boxes size={16} className="text-slate-500" />;
 };
 
-const getEquipmentBadgeClass = (type: string) => {
-  const upper = type.toUpperCase();
-  if (upper.includes('TRUCK') || upper.includes('TRACTOR')) return 'bg-[#F5F3FF] text-[#7C5CFC] border-[#DDD6FE]';
-  if (upper.includes('TRAILER')) return 'bg-amber-50 text-amber-600 border-amber-200';
+const getEquipmentBadgeClass = (type: any) => {
+  if (isTruckLike(type)) return 'bg-[#F5F3FF] text-[#7C5CFC] border-[#DDD6FE]';
+  if (isTrailerLike(type)) return 'bg-amber-50 text-amber-600 border-amber-200';
   return 'bg-slate-100 text-slate-600 border-slate-200';
 };
 
-// Deduplicate equipment by VIN, keeping the most recently updated entry
+/** Builds a VinDetail from the flat variant fields when no nested `vin_detail` exists. */
+const buildVinDetailFromFlat = (raw: RawEquipmentItem): VinDetail | null => {
+  const make = str(raw.make);
+  const model = str(raw.model);
+  const year = str(raw.year ?? raw.model_year);
+  const gvwr = str(raw.gvwr);
+  const trim = str(raw.trim);
+  const length = str(raw.length);
+
+  if (!make && !model && !year && !gvwr && !trim && !length) return null;
+
+  return {
+    vin: str(raw.vin),
+    make: make || null,
+    model: model || null,
+    model_year: year || null,
+    trim: trim || null,
+    gvwr: gvwr || null,
+    length: length || null,
+  };
+};
+
+/** Normalizes any upstream variant into the internal EquipmentItem shape. */
+const normalizeEquipmentItem = (raw: RawEquipmentItem, index: number, dotNumber: string): EquipmentItem => {
+  const nestedVinDetail =
+    raw.vin_detail && typeof raw.vin_detail === 'object' ? (raw.vin_detail as VinDetail) : null;
+
+  return {
+    id: typeof raw.id === 'number' ? raw.id : index + 1,
+    vin: str(raw.vin),
+    dot_number: str(raw.dot_number) || dotNumber,
+    last_inspection_date: str(raw.last_inspection_date) || null,
+    license_plate_state: str(raw.license_plate_state ?? raw.license_state),
+    license_plate_number: str(raw.license_plate_number ?? raw.license_number),
+    // `type` is the flat-variant key, `equipment_type` the expanded one.
+    equipment_type: str(raw.equipment_type ?? raw.type) || UNKNOWN_TYPE,
+    equipment_sub_type: str(raw.equipment_sub_type ?? raw.sub_type),
+    categories: Array.isArray(raw.categories) ? raw.categories.filter(Boolean).join(', ') : str(raw.categories),
+    company_vehicle_number: str(raw.company_vehicle_number),
+    vin_errors: raw.vin_errors === true,
+    created_at: str(raw.created_at),
+    updated_at: str(raw.updated_at),
+    deleted_at: str(raw.deleted_at) || null,
+    classified_at: str(raw.classified_at) || null,
+    vin_detail: nestedVinDetail ?? buildVinDetailFromFlat(raw),
+  };
+};
+
+/** Human-readable title for a unit, falling back to its type when no VIN details exist. */
+const getEquipmentTitle = (item: EquipmentItem): string => {
+  const vd = item.vin_detail;
+  const parts = [str(vd?.model_year), str(vd?.make), str(vd?.model)].filter(Boolean);
+  if (parts.length > 0) return parts.join(' ');
+  return item.equipment_type || UNKNOWN_TYPE;
+};
+
+/**
+ * Deduplicates equipment by VIN, keeping the most recently updated entry.
+ * Records without a VIN (common in the flat variant) are always kept as-is,
+ * otherwise every VIN-less unit would collapse into a single row.
+ */
 const deduplicateEquipment = (items: EquipmentItem[]): EquipmentItem[] => {
   const vinMap = new Map<string, EquipmentItem>();
+  const withoutVin: EquipmentItem[] = [];
+
   for (const item of items) {
+    if (!item.vin) {
+      withoutVin.push(item);
+      continue;
+    }
     const existing = vinMap.get(item.vin);
     if (!existing) {
       vinMap.set(item.vin, item);
-    } else {
-      // Keep the one with the most recent updated_at
-      const existingDate = new Date(existing.updated_at).getTime();
-      const currentDate = new Date(item.updated_at).getTime();
-      if (currentDate > existingDate) {
-        vinMap.set(item.vin, item);
-      }
+      continue;
+    }
+    const existingDate = new Date(existing.updated_at).getTime() || 0;
+    const currentDate = new Date(item.updated_at).getTime() || 0;
+    if (currentDate > existingDate) {
+      vinMap.set(item.vin, item);
     }
   }
-  return Array.from(vinMap.values());
+
+  return [...Array.from(vinMap.values()), ...withoutVin];
 };
 
 const EquipmentDetailModal: React.FC<{ item: EquipmentItem; onClose: () => void }> = ({ item, onClose }) => {
   const vd = item.vin_detail;
+  const equipmentType = item.equipment_type || UNKNOWN_TYPE;
 
-  const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  const InfoRow: React.FC<{ label: string; value: any }> = ({ label, value }) => (
     <div className="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-b-0">
       <span className="text-xs text-slate-500">{label}</span>
-      <span className="text-sm font-semibold text-slate-900 text-right max-w-[200px]">{val(value)}</span>
+      <span className="text-sm font-semibold text-slate-900 text-right max-w-[200px] break-words">{val(value)}</span>
     </div>
+  );
+
+  const hasSpecs = Boolean(
+    vd && (vd.make || vd.model || vd.model_year || vd.body_class || vd.vehicle_type || vd.manufacturer || vd.series)
+  );
+  const hasEngine = Boolean(
+    vd &&
+      (vd.fuel_type_primary ||
+        vd.engine_configuration ||
+        vd.engine_cylinders ||
+        vd.displacement_l ||
+        vd.engine_hp ||
+        vd.drive_type ||
+        vd.transmission_style ||
+        vd.turbo)
+  );
+  const hasWeight = Boolean(
+    vd &&
+      (vd.gvwr ||
+        vd.length ||
+        vd.curb_weight_lb ||
+        vd.abs ||
+        vd.tpms ||
+        vd.seat_belts_all ||
+        vd.air_bag_loc_front ||
+        vd.air_bag_loc_side)
+  );
+  const hasManufacturing = Boolean(
+    vd && (vd.plant_country || vd.plant_state || vd.plant_city || vd.plant_company_name)
   );
 
   return (
@@ -143,15 +272,15 @@ const EquipmentDetailModal: React.FC<{ item: EquipmentItem; onClose: () => void 
         <div className="p-5 md:p-6 border-b border-slate-200 bg-white flex justify-between items-start">
           <div className="flex gap-4 items-center">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
-              item.equipment_type.toUpperCase().includes('TRUCK') || item.equipment_type.toUpperCase().includes('TRACTOR')
+              isTruckLike(equipmentType)
                 ? 'bg-gradient-to-br from-[#7C5CFC] to-purple-600 shadow-[#7C5CFC]/20'
-                : item.equipment_type.toUpperCase().includes('TRAILER')
+                : isTrailerLike(equipmentType)
                   ? 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/20'
                   : 'bg-gradient-to-br from-slate-500 to-slate-600 shadow-slate-500/20'
             }`}>
-              {item.equipment_type.toUpperCase().includes('TRUCK') || item.equipment_type.toUpperCase().includes('TRACTOR')
+              {isTruckLike(equipmentType)
                 ? <Truck size={20} className="text-white" />
-                : item.equipment_type.toUpperCase().includes('TRAILER')
+                : isTrailerLike(equipmentType)
                   ? <Package size={20} className="text-white" />
                   : <Boxes size={20} className="text-white" />
               }
@@ -159,13 +288,13 @@ const EquipmentDetailModal: React.FC<{ item: EquipmentItem; onClose: () => void 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h2 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight">
-                  {vd ? `${vd.model_year} ${vd.make} ${vd.model}` : item.equipment_type}
+                  {getEquipmentTitle(item)}
                 </h2>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getEquipmentBadgeClass(item.equipment_type)}`}>
-                  {item.equipment_type}
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getEquipmentBadgeClass(equipmentType)}`}>
+                  {equipmentType}
                 </span>
               </div>
-              <p className="text-slate-500 text-sm font-mono">{item.vin}</p>
+              <p className="text-slate-500 text-sm font-mono">{item.vin || 'VIN NOT REPORTED'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-75">
@@ -176,81 +305,97 @@ const EquipmentDetailModal: React.FC<{ item: EquipmentItem; onClose: () => void 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Vehicle Identification */}
+            {/* Vehicle Identification — always available */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
                 <Hash size={14} className="text-[#7C5CFC]" /> Vehicle Identification
               </h3>
               <div className="space-y-0">
                 <InfoRow label="VIN" value={item.vin} />
-                <InfoRow label="Equipment Type" value={item.equipment_type} />
+                <InfoRow label="Equipment Type" value={equipmentType} />
                 <InfoRow label="Sub Type" value={item.equipment_sub_type} />
-                <InfoRow label="License Plate" value={item.license_plate_number ? `${item.license_plate_state} - ${item.license_plate_number}` : ''} />
-                <InfoRow label="Last Inspection" value={item.last_inspection_date || ''} />
+                <InfoRow label="Categories" value={item.categories} />
+                <InfoRow label="Unit Number" value={item.company_vehicle_number} />
+                <InfoRow
+                  label="License Plate"
+                  value={item.license_plate_number ? `${item.license_plate_state} - ${item.license_plate_number}`.replace(/^ - /, '') : ''}
+                />
+                <InfoRow label="Last Inspection" value={item.last_inspection_date} />
+                <InfoRow label="VIN Errors" value={item.vin_errors ? 'YES' : 'NO'} />
               </div>
             </div>
 
             {/* Vehicle Specs */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
-                <Wrench size={14} className="text-[#7C5CFC]" /> Vehicle Specifications
-              </h3>
-              <div className="space-y-0">
-                <InfoRow label="Make" value={vd?.make || ''} />
-                <InfoRow label="Model" value={vd?.model || ''} />
-                <InfoRow label="Year" value={vd?.model_year || ''} />
-                <InfoRow label="Body Class" value={vd?.body_class || ''} />
-                <InfoRow label="Vehicle Type" value={vd?.vehicle_type || ''} />
-                <InfoRow label="Manufacturer" value={vd?.manufacturer || ''} />
-                <InfoRow label="Series" value={vd?.series || ''} />
+            {hasSpecs && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
+                  <Wrench size={14} className="text-[#7C5CFC]" /> Vehicle Specifications
+                </h3>
+                <div className="space-y-0">
+                  <InfoRow label="Make" value={vd?.make} />
+                  <InfoRow label="Model" value={vd?.model} />
+                  <InfoRow label="Year" value={vd?.model_year} />
+                  <InfoRow label="Trim" value={vd?.trim} />
+                  <InfoRow label="Body Class" value={vd?.body_class} />
+                  <InfoRow label="Vehicle Type" value={vd?.vehicle_type} />
+                  <InfoRow label="Manufacturer" value={vd?.manufacturer} />
+                  <InfoRow label="Series" value={vd?.series} />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Engine & Drivetrain */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
-                <Fuel size={14} className="text-[#7C5CFC]" /> Engine & Drivetrain
-              </h3>
-              <div className="space-y-0">
-                <InfoRow label="Fuel Type" value={vd?.fuel_type_primary || ''} />
-                <InfoRow label="Engine Config" value={vd?.engine_configuration || ''} />
-                <InfoRow label="Cylinders" value={vd?.engine_cylinders ? String(vd.engine_cylinders) : ''} />
-                <InfoRow label="Displacement" value={vd?.displacement_l ? `${vd.displacement_l}L` : ''} />
-                <InfoRow label="Horsepower" value={vd?.engine_hp || ''} />
-                <InfoRow label="Drive Type" value={vd?.drive_type || ''} />
-                <InfoRow label="Transmission" value={vd?.transmission_style || ''} />
-                <InfoRow label="Turbo" value={vd?.turbo || ''} />
+            {hasEngine && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
+                  <Fuel size={14} className="text-[#7C5CFC]" /> Engine &amp; Drivetrain
+                </h3>
+                <div className="space-y-0">
+                  <InfoRow label="Fuel Type" value={vd?.fuel_type_primary} />
+                  <InfoRow label="Engine Config" value={vd?.engine_configuration} />
+                  <InfoRow label="Cylinders" value={vd?.engine_cylinders} />
+                  <InfoRow label="Displacement" value={vd?.displacement_l ? `${vd.displacement_l}L` : ''} />
+                  <InfoRow label="Horsepower" value={vd?.engine_hp} />
+                  <InfoRow label="Drive Type" value={vd?.drive_type} />
+                  <InfoRow label="Transmission" value={vd?.transmission_style} />
+                  <InfoRow label="Turbo" value={vd?.turbo} />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Weight & Dimensions */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
-                <Gauge size={14} className="text-[#7C5CFC]" /> Weight & Safety
-              </h3>
-              <div className="space-y-0">
-                <InfoRow label="GVWR" value={vd?.gvwr || ''} />
-                <InfoRow label="Curb Weight" value={vd?.curb_weight_lb ? `${vd.curb_weight_lb} lb` : ''} />
-                <InfoRow label="ABS" value={vd?.abs || ''} />
-                <InfoRow label="TPMS" value={vd?.tpms || ''} />
-                <InfoRow label="Seat Belts" value={vd?.seat_belts_all || ''} />
-                <InfoRow label="Front Airbags" value={vd?.air_bag_loc_front || ''} />
-                <InfoRow label="Side Airbags" value={vd?.air_bag_loc_side || ''} />
+            {/* Weight & Safety */}
+            {hasWeight && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
+                  <Gauge size={14} className="text-[#7C5CFC]" /> Weight &amp; Safety
+                </h3>
+                <div className="space-y-0">
+                  <InfoRow label="GVWR" value={vd?.gvwr} />
+                  <InfoRow label="Length" value={vd?.length} />
+                  <InfoRow label="Curb Weight" value={vd?.curb_weight_lb ? `${vd.curb_weight_lb} lb` : ''} />
+                  <InfoRow label="ABS" value={vd?.abs} />
+                  <InfoRow label="TPMS" value={vd?.tpms} />
+                  <InfoRow label="Seat Belts" value={vd?.seat_belts_all} />
+                  <InfoRow label="Front Airbags" value={vd?.air_bag_loc_front} />
+                  <InfoRow label="Side Airbags" value={vd?.air_bag_loc_side} />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Manufacturing */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
-                <MapPin size={14} className="text-[#7C5CFC]" /> Manufacturing
-              </h3>
-              <div className="space-y-0">
-                <InfoRow label="Plant Country" value={vd?.plant_country || ''} />
-                <InfoRow label="Plant State" value={vd?.plant_state || ''} />
-                <InfoRow label="Plant City" value={vd?.plant_city || ''} />
-                <InfoRow label="Plant Company" value={vd?.plant_company_name || ''} />
+            {hasManufacturing && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-4">
+                  <MapPin size={14} className="text-[#7C5CFC]" /> Manufacturing
+                </h3>
+                <div className="space-y-0">
+                  <InfoRow label="Plant Country" value={vd?.plant_country} />
+                  <InfoRow label="Plant State" value={vd?.plant_state} />
+                  <InfoRow label="Plant City" value={vd?.plant_city} />
+                  <InfoRow label="Plant Company" value={vd?.plant_company_name} />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Trailer Info (only for trailers) */}
             {(vd?.trailer_body_type || vd?.trailer_type) && (
@@ -259,8 +404,8 @@ const EquipmentDetailModal: React.FC<{ item: EquipmentItem; onClose: () => void 
                   <Package size={14} className="text-amber-500" /> Trailer Details
                 </h3>
                 <div className="space-y-0">
-                  <InfoRow label="Trailer Body Type" value={vd?.trailer_body_type || ''} />
-                  <InfoRow label="Trailer Type" value={vd?.trailer_type || ''} />
+                  <InfoRow label="Trailer Body Type" value={vd?.trailer_body_type} />
+                  <InfoRow label="Trailer Type" value={vd?.trailer_type} />
                 </div>
               </div>
             )}
@@ -272,11 +417,22 @@ const EquipmentDetailModal: React.FC<{ item: EquipmentItem; onClose: () => void 
                   <Shield size={14} className="text-emerald-500" /> Electric Vehicle
                 </h3>
                 <div className="space-y-0">
-                  <InfoRow label="Battery Type" value={vd?.battery_type || ''} />
-                  <InfoRow label="Battery kWh" value={vd?.battery_kwh || ''} />
-                  <InfoRow label="Electrification" value={vd?.electrification_level || ''} />
-                  <InfoRow label="EV Drive Unit" value={vd?.ev_drive_unit || ''} />
+                  <InfoRow label="Battery Type" value={vd?.battery_type} />
+                  <InfoRow label="Battery kWh" value={vd?.battery_kwh} />
+                  <InfoRow label="Electrification" value={vd?.electrification_level} />
+                  <InfoRow label="EV Drive Unit" value={vd?.ev_drive_unit} />
                 </div>
+              </div>
+            )}
+
+            {/* Shown when the upstream record only reports an equipment type */}
+            {!hasSpecs && !hasEngine && !hasWeight && !hasManufacturing && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center py-10">
+                <Info size={28} className="text-slate-300 mb-3" />
+                <p className="text-sm font-bold text-slate-500 mb-1">No VIN Details Available</p>
+                <p className="text-xs text-slate-400">
+                  This carrier reported the equipment type only, without VIN or vehicle specifications.
+                </p>
               </div>
             )}
           </div>
@@ -295,51 +451,68 @@ export const EquipmentPanel: React.FC<EquipmentPanelProps> = ({ dotNumber }) => 
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
 
   useEffect(() => {
+    let cancelled = false;
+
+    const fetchEquipment = async () => {
+      setIsLoading(true);
+      setError(null);
+      setActiveFilter('ALL');
+
+      try {
+        const rawItems: RawEquipmentItem[] = [];
+        let page = 1;
+        let lastPage = 1;
+
+        do {
+          const response = await fetch(`/api/equipment?dotNumber=${encodeURIComponent(dotNumber)}&page=${page}&perPage=100`);
+          if (!response.ok) throw new Error('Failed to fetch equipment data');
+
+          const payload: EquipmentApiResponse = await response.json();
+          const pageItems = Array.isArray(payload?.data) ? payload.data : [];
+          rawItems.push(...pageItems);
+
+          // Pagination metadata lives either at the root or under `meta`.
+          const reportedLastPage = Number(payload?.last_page ?? payload?.meta?.last_page ?? 1);
+          lastPage = Number.isFinite(reportedLastPage) && reportedLastPage > 0 ? Math.min(reportedLastPage, MAX_PAGES) : 1;
+          page++;
+        } while (page <= lastPage);
+
+        if (cancelled) return;
+
+        const normalized = rawItems
+          .filter((raw) => raw && typeof raw === 'object')
+          .map((raw, index) => normalizeEquipmentItem(raw, index, dotNumber));
+        const deduplicated = deduplicateEquipment(normalized);
+
+        setEquipment(deduplicated);
+        setTotalCount(deduplicated.length);
+      } catch (err: any) {
+        if (!cancelled) {
+          setEquipment([]);
+          setTotalCount(0);
+          setError(err?.message || 'Failed to load equipment');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
     fetchEquipment();
+
+    return () => {
+      cancelled = true;
+    };
   }, [dotNumber]);
 
-  const fetchEquipment = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Fetch all pages
-      let allItems: EquipmentItem[] = [];
-      let page = 1;
-      let lastPage = 1;
+  // Unique equipment types for the filter tabs
+  const equipmentTypes = ['ALL', ...Array.from(new Set(equipment.map((e) => e.equipment_type || UNKNOWN_TYPE)))];
 
-      do {
-        const response = await fetch(
-          `/api/equipment?dotNumber=${dotNumber}&page=${page}&perPage=100`
-        );
-        if (!response.ok) throw new Error('Failed to fetch equipment data');
-        const data: EquipmentApiResponse = await response.json();
-        allItems = [...allItems, ...data.data];
-        lastPage = data.last_page;
-        page++;
-      } while (page <= lastPage);
+  const filteredEquipment =
+    activeFilter === 'ALL' ? equipment : equipment.filter((e) => (e.equipment_type || UNKNOWN_TYPE) === activeFilter);
 
-      // Deduplicate by VIN
-      const deduplicated = deduplicateEquipment(allItems);
-      setEquipment(deduplicated);
-      setTotalCount(deduplicated.length);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load equipment');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Get unique equipment types for filter tabs
-  const equipmentTypes = ['ALL', ...Array.from(new Set(equipment.map(e => e.equipment_type)))];
-
-  // Filter equipment based on active filter
-  const filteredEquipment = activeFilter === 'ALL'
-    ? equipment
-    : equipment.filter(e => e.equipment_type === activeFilter);
-
-  // Group counts
   const typeCounts = equipment.reduce((acc, item) => {
-    acc[item.equipment_type] = (acc[item.equipment_type] || 0) + 1;
+    const key = item.equipment_type || UNKNOWN_TYPE;
+    acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -393,9 +566,7 @@ export const EquipmentPanel: React.FC<EquipmentPanelProps> = ({ dotNumber }) => 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
             {Object.entries(typeCounts).map(([type, count]) => (
               <div key={type} className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-center">
-                <div className="flex items-center justify-center mb-1.5">
-                  {getEquipmentIcon(type)}
-                </div>
+                <div className="flex items-center justify-center mb-1.5">{getEquipmentIcon(type)}</div>
                 <span className="text-lg font-extrabold text-slate-900 block">{count}</span>
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{type}</span>
               </div>
@@ -406,7 +577,7 @@ export const EquipmentPanel: React.FC<EquipmentPanelProps> = ({ dotNumber }) => 
         {/* Filter Tabs */}
         {equipmentTypes.length > 2 && (
           <div className="flex flex-wrap gap-2 mb-5">
-            {equipmentTypes.map(type => (
+            {equipmentTypes.map((type) => (
               <button
                 key={type}
                 onClick={() => setActiveFilter(type)}
@@ -431,17 +602,17 @@ export const EquipmentPanel: React.FC<EquipmentPanelProps> = ({ dotNumber }) => 
           </div>
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
-            {filteredEquipment.map((item) => (
+            {filteredEquipment.map((item, index) => (
               <div
-                key={item.id}
+                key={`${item.id}-${item.vin || item.equipment_type}-${index}`}
                 onClick={() => setSelectedItem(item)}
                 className="group flex items-center justify-between p-4 bg-slate-50 hover:bg-[#F5F3FF] border border-slate-200 hover:border-[#DDD6FE] rounded-xl cursor-pointer transition-all"
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                    item.equipment_type.toUpperCase().includes('TRUCK') || item.equipment_type.toUpperCase().includes('TRACTOR')
+                    isTruckLike(item.equipment_type)
                       ? 'bg-[#F5F3FF] border-[#DDD6FE]'
-                      : item.equipment_type.toUpperCase().includes('TRAILER')
+                      : isTrailerLike(item.equipment_type)
                         ? 'bg-amber-50 border-amber-200'
                         : 'bg-slate-100 border-slate-200'
                   }`}>
@@ -450,20 +621,18 @@ export const EquipmentPanel: React.FC<EquipmentPanelProps> = ({ dotNumber }) => 
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-sm font-bold text-slate-900 group-hover:text-[#7C5CFC] transition-colors">
-                        {item.vin_detail
-                          ? `${item.vin_detail.model_year} ${item.vin_detail.make} ${item.vin_detail.model}`
-                          : item.equipment_type
-                        }
+                        {getEquipmentTitle(item)}
                       </span>
                       <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold border ${getEquipmentBadgeClass(item.equipment_type)}`}>
-                        {item.equipment_type}
+                        {item.equipment_type || UNKNOWN_TYPE}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-[11px] text-slate-500 font-mono">{item.vin}</span>
+                      <span className="text-[11px] text-slate-500 font-mono">{item.vin || 'VIN not reported'}</span>
                       {item.license_plate_number && (
                         <span className="text-[10px] text-slate-400">
-                          {item.license_plate_state} · {item.license_plate_number}
+                          {item.license_plate_state ? `${item.license_plate_state} · ` : ''}
+                          {item.license_plate_number}
                         </span>
                       )}
                     </div>
